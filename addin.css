@@ -1,0 +1,1471 @@
+/*
+ * Customer 360 — styles
+ * =====================
+ * Everything is scoped under #c360-app. MyGeotab injects this page into its
+ * own document, so a bare selector like `h2 { }` or `.card { }` would leak out
+ * and restyle MyGeotab itself.
+ *
+ * Design intent (spec section 28): an internal enterprise intelligence tool.
+ * Dense but readable, strong hierarchy, minimal decoration, and colour used
+ * sparingly — always as a second cue alongside a text label, never as the only
+ * carrier of meaning.
+ *
+ * Colour is reserved for exactly three jobs:
+ *   1. source attribution   internal / customer website / external web
+ *   2. severity             good / watch / bad
+ *   3. the mock-data marker, which is deliberately the loudest thing here
+ */
+
+/* ================================================================== */
+/* Tokens                                                             */
+/* ================================================================== */
+
+#c360-app {
+    --c360-bg: #f4f6f8;
+    --c360-surface: #ffffff;
+    --c360-surface-alt: #fafbfc;
+    --c360-border: #dfe3e8;
+    --c360-border-strong: #c3cad3;
+
+    --c360-text: #16202b;
+    --c360-text-muted: #566374;
+    --c360-text-faint: #8794a3;
+
+    --c360-accent: #1f4e8c;
+    --c360-accent-soft: #e8eef7;
+
+    --c360-good: #0f6f45;
+    --c360-good-bg: #e6f4ec;
+    --c360-watch: #8a5300;
+    --c360-watch-bg: #fdf2e0;
+    --c360-bad: #a4231a;
+    --c360-bad-bg: #fbeceb;
+    --c360-neutral-bg: #eef1f4;
+
+    --c360-website: #10635a;
+    --c360-website-bg: #e4f2f0;
+    --c360-external: #8a5312;
+    --c360-external-bg: #f7efe5;
+
+    --c360-mock: #9d174d;
+    --c360-mock-bg: #fde8ef;
+
+    /*
+     * Soft border tints. State on a card is carried by its border colour and
+     * a faint wash, not by a thick coloured strip down one edge — and never
+     * by colour alone: every toned card also prints its state in words
+     * (an "Escalated" chip, a "High" severity chip, a direction label).
+     */
+    --c360-good-line: #bcdfcd;
+    --c360-good-wash: #f5fbf8;
+    --c360-watch-line: #ecd5a9;
+    --c360-watch-wash: #fefbf5;
+    --c360-bad-line: #eec5c1;
+    --c360-bad-wash: #fdf8f7;
+    --c360-accent-line: #bed2ed;
+    --c360-accent-wash: #f8fafd;
+
+    --c360-radius: 6px;
+    --c360-gap: 16px;
+
+    box-sizing: border-box;
+    min-height: 100vh;
+    padding: 0 0 40px;
+    margin: 0;
+
+    background: var(--c360-bg);
+    color: var(--c360-text);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+#c360-app *,
+#c360-app *::before,
+#c360-app *::after {
+    box-sizing: border-box;
+}
+
+#c360-app p,
+#c360-app h1,
+#c360-app h2,
+#c360-app h3,
+#c360-app h4,
+#c360-app ul,
+#c360-app ol,
+#c360-app dl,
+#c360-app dd {
+    margin: 0;
+}
+
+#c360-app ul,
+#c360-app ol {
+    padding: 0;
+    list-style: none;
+}
+
+#c360-app button {
+    font: inherit;
+    color: inherit;
+}
+
+/* Visible focus everywhere — this is an internal tool used with a keyboard. */
+#c360-app :focus-visible {
+    outline: 2px solid var(--c360-accent);
+    outline-offset: 2px;
+}
+
+.c360-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ================================================================== */
+/* Top bar                                                            */
+/* ================================================================== */
+
+.c360-topbar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+
+    padding: 14px 24px;
+    background: var(--c360-surface);
+    border-bottom: 1px solid var(--c360-border);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.c360-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.c360-brand-mark {
+    display: inline-block;
+    padding: 3px 7px;
+    background: var(--c360-accent);
+    color: #ffffff;
+    border-radius: var(--c360-radius);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.c360-brand-name {
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.c360-brand-sub {
+    font-size: 12px;
+    color: var(--c360-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* ---- Account search ---------------------------------------------- */
+
+.c360-search {
+    position: relative;
+    flex: 1 1 320px;
+    max-width: 480px;
+}
+
+.c360-search-input {
+    width: 100%;
+    padding: 9px 12px;
+
+    font-size: 14px;
+    color: var(--c360-text);
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: var(--c360-radius);
+}
+
+.c360-search-input::placeholder { color: var(--c360-text-faint); }
+
+.c360-search-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    max-height: 320px;
+    overflow-y: auto;
+
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: var(--c360-radius);
+    box-shadow: 0 8px 24px rgba(22, 32, 43, 0.12);
+}
+
+.c360-result {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--c360-border);
+    cursor: pointer;
+}
+
+.c360-result:last-child { border-bottom: 0; }
+.c360-result:hover { background: var(--c360-accent-soft); }
+
+.c360-result--note {
+    padding: 10px 12px;
+    color: var(--c360-text-muted);
+    font-style: italic;
+}
+
+.c360-result-name { font-weight: 600; }
+
+.c360-result-industry {
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+/* ================================================================== */
+/* Mock-data banner — deliberately impossible to miss                 */
+/* ================================================================== */
+
+.c360-mock-banner {
+    margin: 0;
+    padding: 12px 24px;
+
+    background: var(--c360-mock-bg);
+    border-bottom: 2px solid var(--c360-mock);
+    color: #6b0f36;
+    font-size: 13px;
+}
+
+.c360-mock-banner strong {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ================================================================== */
+/* Account header                                                     */
+/* ================================================================== */
+
+.c360-account-header {
+    padding: 20px 24px;
+    background: var(--c360-surface);
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-account-head {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+    gap: 24px;
+    align-items: start;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.c360-account-name {
+    font-size: 26px;
+    font-weight: 680;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+.c360-account-industry {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--c360-text-muted);
+}
+
+.c360-account-site {
+    margin-top: 6px;
+    font-size: 13px;
+}
+
+.c360-account-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 20px;
+}
+
+/* ---- Key/value rows ----------------------------------------------- */
+
+.c360-kv-key {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c360-text-faint);
+}
+
+.c360-kv-value {
+    margin: 2px 0 0;
+    font-size: 13px;
+    word-break: break-word;
+}
+
+/* Missing values are visibly missing, never blank or zero. */
+.c360-kv-value--missing {
+    color: var(--c360-text-faint);
+    font-style: italic;
+}
+
+.c360-kv-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px 16px;
+    margin-top: 10px;
+}
+
+.c360-kv-list--tight {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+}
+
+.c360-inline-note {
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+/* ================================================================== */
+/* Source status strip                                                */
+/* ================================================================== */
+
+.c360-source-status {
+    padding: 10px 24px;
+    background: var(--c360-surface-alt);
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.c360-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.c360-status-icon { font-weight: 700; }
+.c360-status--ok .c360-status-icon { color: var(--c360-good); }
+.c360-status--warn .c360-status-icon { color: var(--c360-watch); }
+
+.c360-status-label { font-weight: 600; }
+.c360-status-detail { color: var(--c360-text-muted); }
+
+/* ================================================================== */
+/* Toolbar: filters, timestamp, refresh                               */
+/* ================================================================== */
+
+.c360-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 14px 24px;
+}
+
+.c360-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.c360-filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c360-text-faint);
+}
+
+.c360-filter-set {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.c360-filter {
+    padding: 5px 11px;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.c360-filter:hover { border-color: var(--c360-accent); }
+
+.c360-filter.is-active {
+    background: var(--c360-accent);
+    border-color: var(--c360-accent);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.c360-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.c360-updated {
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-button {
+    padding: 7px 14px;
+    background: var(--c360-accent);
+    color: #ffffff;
+    border: 1px solid var(--c360-accent);
+    border-radius: var(--c360-radius);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.c360-button:hover { background: #17406f; }
+.c360-button:disabled { opacity: 0.6; cursor: default; }
+
+/* ================================================================== */
+/* Sections                                                           */
+/* ================================================================== */
+
+.c360-content {
+    display: block;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.c360-section {
+    margin-top: 20px;
+    padding: 18px 20px 20px;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-section-title {
+    font-size: 15px;
+    font-weight: 680;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.c360-section-meta,
+.c360-section-meta-text {
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-section-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+    max-width: 90ch;
+}
+
+.c360-section-body { margin-top: 14px; }
+
+.c360-sub-title,
+.c360-col-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c360-text-muted);
+    margin-bottom: 8px;
+}
+
+.c360-sub-title { margin-top: 16px; }
+
+.c360-col-count {
+    font-size: 12px;
+    color: var(--c360-text-muted);
+    margin-bottom: 10px;
+}
+
+/* ---- Column layouts ------------------------------------------------ */
+
+.c360-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.c360-three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.c360-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--c360-gap);
+}
+
+/* ================================================================== */
+/* Cards                                                              */
+/* ================================================================== */
+
+.c360-card {
+    padding: 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-card--good { border-color: var(--c360-good-line); background: var(--c360-good-wash); }
+.c360-card--watch { border-color: var(--c360-watch-line); background: var(--c360-watch-wash); }
+.c360-card--bad { border-color: var(--c360-bad-line); background: var(--c360-bad-wash); }
+.c360-card--open { border-color: var(--c360-accent-line); background: var(--c360-accent-wash); }
+
+.c360-card-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.c360-card-title {
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.c360-card-text { margin-top: 8px; }
+
+.c360-card-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-card-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--c360-border);
+}
+
+.c360-amount {
+    margin-top: 6px;
+    font-size: 20px;
+    font-weight: 680;
+    letter-spacing: -0.01em;
+}
+
+.c360-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c360-text-muted);
+}
+
+.c360-eyebrow--good { color: var(--c360-good); }
+.c360-eyebrow--bad { color: var(--c360-bad); }
+
+.c360-rank {
+    display: inline-block;
+    padding: 1px 6px;
+    background: var(--c360-neutral-bg);
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c360-text-muted);
+}
+
+/* ================================================================== */
+/* Badges and chips                                                   */
+/* ================================================================== */
+
+.c360-source {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+
+    background: var(--c360-accent-soft);
+    color: var(--c360-accent);
+}
+
+.c360-source--website {
+    background: var(--c360-website-bg);
+    color: var(--c360-website);
+}
+
+.c360-source--external {
+    background: var(--c360-external-bg);
+    color: var(--c360-external);
+}
+
+.c360-mock {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-left: 4px;
+    background: var(--c360-mock-bg);
+    color: var(--c360-mock);
+    border: 1px dashed var(--c360-mock);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.c360-chip {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--c360-neutral-bg);
+    color: var(--c360-text-muted);
+    white-space: nowrap;
+}
+
+.c360-chip--high,
+.c360-chip--bad { background: var(--c360-bad-bg); color: var(--c360-bad); }
+
+.c360-chip--medium,
+.c360-chip--watch { background: var(--c360-watch-bg); color: var(--c360-watch); }
+
+.c360-chip--low,
+.c360-chip--good { background: var(--c360-good-bg); color: var(--c360-good); }
+
+.c360-chip--confirmed { background: var(--c360-good-bg); color: var(--c360-good); }
+.c360-chip--likely { background: var(--c360-watch-bg); color: var(--c360-watch); }
+.c360-chip--unverified { background: var(--c360-neutral-bg); color: var(--c360-text-muted); }
+
+.c360-confidence {
+    display: inline-block;
+    padding: 1px 8px;
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--c360-text-muted);
+    white-space: nowrap;
+}
+
+.c360-confidence--high { border-color: var(--c360-good); color: var(--c360-good); }
+.c360-confidence--medium { border-color: var(--c360-watch); color: var(--c360-watch); }
+.c360-confidence--low { border-color: var(--c360-border-strong); color: var(--c360-text-faint); }
+
+.c360-tag {
+    display: inline-block;
+    padding: 1px 7px;
+    margin: 0 4px 4px 0;
+    background: var(--c360-neutral-bg);
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+/* ================================================================== */
+/* Links                                                              */
+/* ================================================================== */
+
+.c360-link {
+    color: var(--c360-accent);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(31, 78, 140, 0.3);
+}
+
+.c360-link:hover { border-bottom-color: var(--c360-accent); }
+
+.c360-link-icon {
+    margin-left: 2px;
+    font-size: 10px;
+}
+
+/* ================================================================== */
+/* Empty states                                                       */
+/* ================================================================== */
+
+.c360-empty {
+    padding: 14px;
+    background: var(--c360-surface-alt);
+    border: 1px dashed var(--c360-border-strong);
+    border-radius: var(--c360-radius);
+    color: var(--c360-text-muted);
+    font-size: 13px;
+}
+
+.c360-empty-inline {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--c360-text-faint);
+    font-style: italic;
+}
+
+.c360-more {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+/* ================================================================== */
+/* What changed                                                       */
+/* ================================================================== */
+
+.c360-changes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--c360-gap);
+}
+
+.c360-change {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-change--up { border-color: var(--c360-good-line); }
+.c360-change--down { border-color: var(--c360-bad-line); }
+.c360-change--warn { border-color: var(--c360-watch-line); }
+
+/*
+ * The direction glyph is where the change's colour lives — a small round
+ * marker beside the text, rather than a stripe down the card. The glyph is
+ * decorative (aria-hidden); the direction is also stated in the label text
+ * next to it, so nothing here depends on colour or shape alone.
+ */
+.c360-dir {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    background: var(--c360-neutral-bg);
+    color: var(--c360-text-faint);
+}
+
+.c360-dir--up { background: var(--c360-good-bg); color: var(--c360-good); }
+.c360-dir--down { background: var(--c360-bad-bg); color: var(--c360-bad); }
+.c360-dir--warn { background: var(--c360-watch-bg); color: var(--c360-watch); }
+
+.c360-change-label { font-weight: 650; }
+
+.c360-change-text {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--c360-text-muted);
+}
+
+.c360-change-meta { margin-top: 8px; }
+
+/* ================================================================== */
+/* Summary                                                            */
+/* ================================================================== */
+
+.c360-summary-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 24px;
+}
+
+.c360-summary-line {
+    margin-bottom: 10px;
+    max-width: 85ch;
+}
+
+.c360-summary-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c360-gap);
+}
+
+.c360-generated {
+    font-size: 11px;
+    color: var(--c360-text-faint);
+    font-style: italic;
+}
+
+/* ================================================================== */
+/* Health                                                             */
+/* ================================================================== */
+
+.c360-health {
+    display: grid;
+    gap: 1px;
+    background: var(--c360-border);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+    overflow: hidden;
+}
+
+.c360-health-row {
+    display: grid;
+    grid-template-columns: 160px 130px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+    padding: 11px 14px;
+    background: var(--c360-surface);
+}
+
+.c360-health-dim {
+    font-weight: 650;
+}
+
+.c360-health-state {
+    font-weight: 700;
+    font-size: 13px;
+    padding: 1px 10px;
+    border-radius: 999px;
+    justify-self: start;
+    background: var(--c360-neutral-bg);
+    color: var(--c360-text-muted);
+}
+
+.c360-health-row--good .c360-health-state { background: var(--c360-good-bg); color: var(--c360-good); }
+.c360-health-row--watch .c360-health-state { background: var(--c360-watch-bg); color: var(--c360-watch); }
+.c360-health-row--bad .c360-health-state { background: var(--c360-bad-bg); color: var(--c360-bad); }
+
+.c360-health-basis {
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+/* ================================================================== */
+/* Stats                                                              */
+/* ================================================================== */
+
+.c360-stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.c360-stat {
+    display: flex;
+    flex-direction: column;
+    min-width: 130px;
+    padding: 10px 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.c360-stat-label {
+    margin-top: 2px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+}
+
+.c360-stat--good .c360-stat-value { color: var(--c360-good); }
+.c360-stat--watch .c360-stat-value { color: var(--c360-watch); }
+.c360-stat--bad .c360-stat-value { color: var(--c360-bad); }
+
+/* ================================================================== */
+/* Tickets                                                            */
+/* ================================================================== */
+
+.c360-ticket-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--c360-gap);
+}
+
+.c360-ticket {
+    padding: 12px 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+/* An escalated ticket also carries a literal "Escalated" chip in its header,
+   so the tint is reinforcement, not the signal itself. */
+.c360-ticket--bad { border-color: var(--c360-bad-line); background: var(--c360-bad-wash); }
+.c360-ticket--watch { border-color: var(--c360-watch-line); }
+
+.c360-ticket-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.c360-ticket-id {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c360-text-muted);
+}
+
+.c360-ticket-subject { font-weight: 600; }
+
+/* ================================================================== */
+/* Escalation impact                                                  */
+/* ================================================================== */
+
+.c360-impact {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-impact-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+}
+
+.c360-impact-text { margin-top: 4px; font-size: 13px; }
+
+/* Where the impact claim came from — never our own inference. */
+.c360-impact-src {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--c360-text-faint);
+    font-style: italic;
+}
+
+/* ================================================================== */
+/* Evidence disclosure                                                */
+/* ================================================================== */
+
+.c360-evidence {
+    margin-top: 10px;
+    border-top: 1px dashed var(--c360-border-strong);
+    padding-top: 8px;
+}
+
+.c360-evidence-summary {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c360-accent);
+    cursor: pointer;
+}
+
+.c360-evidence-list { margin-top: 8px; }
+
+.c360-evidence-item {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-evidence-item:last-child { border-bottom: 0; }
+
+.c360-evidence-text {
+    display: block;
+    font-size: 12px;
+}
+
+.c360-evidence-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+.c360-evidence-none {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--c360-text-faint);
+    font-style: italic;
+}
+
+/* ================================================================== */
+/* Bullets                                                            */
+/* ================================================================== */
+
+.c360-bullets {
+    list-style: disc;
+    padding-left: 18px;
+    font-size: 13px;
+}
+
+.c360-bullets li { margin-bottom: 3px; }
+
+.c360-bullet-group { margin-top: 12px; }
+
+.c360-bullet-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+    margin-bottom: 4px;
+}
+
+.c360-earlier {
+    margin-top: 14px;
+    font-size: 13px;
+}
+
+.c360-earlier summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--c360-accent);
+}
+
+/* ================================================================== */
+/* News / website signals                                             */
+/* ================================================================== */
+
+.c360-news { display: grid; gap: 12px; }
+
+.c360-news-item {
+    padding: 12px 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-news-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+}
+
+.c360-news-cat {
+    padding: 1px 6px;
+    background: var(--c360-neutral-bg);
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+}
+
+.c360-news-title { margin-top: 5px; font-weight: 650; }
+
+.c360-news-summary {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--c360-text-muted);
+}
+
+.c360-news-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.c360-fetched {
+    font-size: 11px;
+    color: var(--c360-text-faint);
+    margin-bottom: 8px;
+}
+
+/* ================================================================== */
+/* Contacts                                                           */
+/* ================================================================== */
+
+.c360-contact-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c360-accent);
+}
+
+.c360-corroborated {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--c360-good);
+}
+
+.c360-gaps {
+    margin-top: 18px;
+    padding: 12px 14px;
+    background: var(--c360-surface-alt);
+    border: 1px dashed var(--c360-border-strong);
+    border-radius: var(--c360-radius);
+}
+
+.c360-gaps-note {
+    font-size: 12px;
+    color: var(--c360-text-muted);
+    margin-bottom: 8px;
+}
+
+/* ================================================================== */
+/* Opportunities: evidence -> interpretation -> action                */
+/* ================================================================== */
+
+.c360-reason { margin-top: 8px; }
+
+.c360-reason-label {
+    margin-top: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--c360-text-faint);
+}
+
+.c360-reason-label:first-child { margin-top: 0; }
+
+.c360-reason-text { font-size: 13px; }
+
+.c360-signal {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: var(--c360-good-bg);
+    border-radius: var(--c360-radius);
+    font-size: 12px;
+}
+
+.c360-signal--down { background: var(--c360-bad-bg); }
+.c360-signal--warn { background: var(--c360-watch-bg); }
+.c360-signal--flat { background: var(--c360-neutral-bg); }
+
+/* ================================================================== */
+/* Timeline                                                           */
+/* ================================================================== */
+
+.c360-timeline {
+    position: relative;
+    padding-left: 8px;
+}
+
+/*
+ * The left border here is the timeline's axis, not a status tab: the items
+ * are flush against each other, so their borders join into one continuous
+ * vertical rail down the section. Its colour marks which source the entry
+ * came from, matching the source badge printed on the entry itself.
+ */
+.c360-tl-item {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 16px;
+    padding: 12px 0 12px 14px;
+    border-left: 2px solid var(--c360-border);
+}
+
+.c360-tl-item--internal { border-left-color: var(--c360-accent); }
+.c360-tl-item--website { border-left-color: var(--c360-website); }
+.c360-tl-item--external { border-left-color: var(--c360-external); }
+
+.c360-tl-date { display: flex; flex-direction: column; }
+
+.c360-tl-day {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.c360-tl-rel {
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+.c360-tl-title { font-weight: 600; }
+
+.c360-tl-detail {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-tl-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+/* ================================================================== */
+/* Recommended actions                                                */
+/* ================================================================== */
+
+.c360-actions { display: grid; gap: 12px; }
+
+.c360-action {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    padding: 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+/*
+ * Priority reads from the numbered marker rather than a stripe: the list is
+ * already ordered by priority, and each row prints a HIGH / MEDIUM / LOW chip
+ * on the right. The marker just makes the ranking scannable at a glance.
+ */
+.c360-action-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: var(--c360-neutral-bg);
+    border: 1px solid transparent;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c360-text-muted);
+}
+
+.c360-action--high .c360-action-num {
+    background: var(--c360-bad-bg);
+    border-color: var(--c360-bad-line);
+    color: var(--c360-bad);
+}
+
+.c360-action--medium .c360-action-num {
+    background: var(--c360-watch-bg);
+    border-color: var(--c360-watch-line);
+    color: var(--c360-watch);
+}
+
+.c360-action-text {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.c360-action-why {
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-action-why-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+    color: var(--c360-text-faint);
+}
+
+/* ================================================================== */
+/* Sources section                                                    */
+/* ================================================================== */
+
+.c360-source-list {
+    display: grid;
+    gap: 8px;
+}
+
+.c360-source-item {
+    padding: 8px 10px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-source-text {
+    display: block;
+    font-size: 12px;
+}
+
+.c360-source-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+/* ================================================================== */
+/* Welcome, loading, error                                            */
+/* ================================================================== */
+
+.c360-welcome {
+    max-width: 720px;
+    margin: 48px auto;
+    padding: 28px;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+}
+
+.c360-welcome-title {
+    font-size: 20px;
+    font-weight: 680;
+}
+
+.c360-welcome-text {
+    margin-top: 8px;
+    color: var(--c360-text-muted);
+}
+
+.c360-recent { display: grid; gap: 8px; }
+
+.c360-recent-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+    cursor: pointer;
+}
+
+.c360-recent-item:hover { border-color: var(--c360-accent); }
+
+.c360-loading {
+    max-width: 520px;
+    margin: 64px auto;
+    padding: 24px;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-radius: var(--c360-radius);
+    text-align: center;
+}
+
+.c360-loading-title { font-weight: 650; }
+
+.c360-loading-list {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-loading-list li::before {
+    content: "…";
+    margin-right: 5px;
+    color: var(--c360-text-faint);
+}
+
+.c360-error {
+    max-width: 640px;
+    margin: 48px auto;
+    padding: 24px;
+    background: var(--c360-bad-bg);
+    border: 1px solid var(--c360-bad);
+    border-radius: var(--c360-radius);
+}
+
+.c360-error-title {
+    font-size: 17px;
+    font-weight: 680;
+    color: var(--c360-bad);
+}
+
+.c360-error-text { margin: 8px 0 14px; }
+
+.c360-footer {
+    max-width: 1440px;
+    margin: 28px auto 0;
+    padding: 0 24px;
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+/* ================================================================== */
+/* Responsive                                                         */
+/* ================================================================== */
+
+@media (max-width: 1100px) {
+    .c360-three-col { grid-template-columns: 1fr; }
+    .c360-summary-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+    .c360-two-col { grid-template-columns: 1fr; }
+    .c360-account-head { grid-template-columns: 1fr; }
+    .c360-health-row { grid-template-columns: 1fr; gap: 4px; }
+    .c360-toolbar-right { margin-left: 0; width: 100%; }
+}
+
+@media (max-width: 620px) {
+    .c360-content,
+    .c360-topbar,
+    .c360-account-header,
+    .c360-source-status,
+    .c360-toolbar { padding-left: 14px; padding-right: 14px; }
+
+    .c360-tl-item { grid-template-columns: 1fr; gap: 4px; }
+    .c360-action { grid-template-columns: 26px minmax(0, 1fr); }
+    .c360-kv-list { grid-template-columns: 1fr; }
+}
+
+/* Respect a user's reduced-motion preference: nothing here animates, but
+   any future transition must honour it. */
+@media (prefers-reduced-motion: reduce) {
+    #c360-app * { transition: none !important; animation: none !important; }
+}

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Customer 360 — Account Intelligence</title>
+
+    <link rel="stylesheet" href="addin.css" />
+</head>
+<body>
+    <!--
+        Root container.
+
+        Every id and class is prefixed "c360-" because MyGeotab injects this
+        page into its own DOM — unprefixed names would collide with, or leak
+        styles into, MyGeotab itself. Same convention as the other add-ins
+        in this org ("dsc-", "sec-").
+    -->
+    <div id="c360-app">
+
+        <!-- ============================================================
+             Top bar: product name + account search
+             ============================================================ -->
+        <header class="c360-topbar">
+            <div class="c360-brand">
+                <span class="c360-brand-mark" aria-hidden="true">360</span>
+                <span class="c360-brand-name">Customer 360</span>
+                <span class="c360-brand-sub">Account Intelligence</span>
+            </div>
+
+            <div class="c360-search">
+                <label class="c360-visually-hidden" for="c360-search">Search customer accounts</label>
+                <input
+                    type="search"
+                    id="c360-search"
+                    class="c360-search-input"
+                    placeholder="Search customer account…"
+                    autocomplete="off"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-controls="c360-search-results"
+                    aria-autocomplete="list" />
+                <ul id="c360-search-results"
+                    class="c360-search-results"
+                    role="listbox"
+                    aria-label="Account search results"
+                    hidden></ul>
+            </div>
+        </header>
+
+        <!--
+            Mock-data banner. Rendered by app.js and shown whenever the active
+            data source is the bundled sample set, so nobody can mistake
+            invented records for the real account picture.
+        -->
+        <div id="c360-mock-banner" class="c360-mock-banner" role="note" hidden></div>
+
+        <!-- Account header: name, industry, key facts (spec section 6) -->
+        <div id="c360-account-header" class="c360-account-header" hidden></div>
+
+        <!-- Per-source load status: internal / website / external (section 32) -->
+        <div id="c360-source-status" class="c360-source-status" hidden></div>
+
+        <!-- Filters, last-updated stamp and Refresh Intelligence (sections 29, 34) -->
+        <div id="c360-toolbar" class="c360-toolbar" hidden></div>
+
+        <!-- First-run state: choose an account -->
+        <div id="c360-welcome" class="c360-welcome" hidden></div>
+
+        <!-- Page-level error state -->
+        <div id="c360-error" class="c360-error" role="alert" hidden></div>
+
+        <!-- All dashboard sections are rendered into here -->
+        <main id="c360-content" class="c360-content"></main>
+
+        <footer class="c360-footer">
+            <p>Internal use only. Intelligence on this page is derived from the records listed in
+               the Sources section; interpretations are labelled with a confidence level.</p>
+        </footer>
+    </div>
+
+    <!--
+        No build step and no dependencies, matching the other add-ins here.
+        Load order is dependency order: core, then normalisation, then
+        services, then the intelligence engine, then the UI.
+    -->
+
+    <!-- Core -->
+    <script src="js/core/namespace.js"></script>
+    <script src="js/core/config.js"></script>
+    <script src="js/core/util.js"></script>
+    <script src="js/core/cache.js"></script>
+
+    <!-- Normalisation (services reference it lazily, at call time) -->
+    <script src="js/intelligence/normalize.js"></script>
+
+    <!-- Data sources -->
+    <script src="js/services/mockData.js"></script>
+    <script src="js/services/gatewayClient.js"></script>
+    <script src="js/services/dataSource.js"></script>
+    <script src="js/services/cachedService.js"></script>
+
+    <!-- Services -->
+    <script src="js/services/accountService.js"></script>
+    <script src="js/services/quoteService.js"></script>
+    <script src="js/services/orderService.js"></script>
+    <script src="js/services/ticketService.js"></script>
+    <script src="js/services/billingService.js"></script>
+    <script src="js/services/technicalService.js"></script>
+    <script src="js/services/accountReviewService.js"></script>
+    <script src="js/services/websiteResearchService.js"></script>
+    <script src="js/services/webResearchService.js"></script>
+    <script src="js/services/contactService.js"></script>
+    <script src="js/services/geotabService.js"></script>
+
+    <!-- Intelligence engine: facts -> signals -> risks/opportunities -> actions -->
+    <script src="js/intelligence/facts.js"></script>
+    <script src="js/intelligence/signals.js"></script>
+    <script src="js/intelligence/risks.js"></script>
+    <script src="js/intelligence/opportunities.js"></script>
+    <script src="js/intelligence/health.js"></script>
+    <script src="js/intelligence/timeline.js"></script>
+    <script src="js/intelligence/recommendations.js"></script>
+    <script src="js/intelligence/summary.js"></script>
+    <script src="js/intelligence/intelligenceEngine.js"></script>
+
+    <!-- Orchestration + UI -->
+    <script src="js/orchestrator.js"></script>
+    <script src="js/ui/components.js"></script>
+    <script src="js/ui/render.js"></script>
+    <script src="js/ui/app.js"></script>
+
+    <!-- MyGeotab lifecycle (last: everything above must already exist) -->
+    <script src="js/addin.js"></script>
+</body>
+</html>
