@@ -11,6 +11,13 @@
  * because the content is not generated: `js/scorecard/brief.js` assembles every
  * sentence from records the scorecard already holds.
  *
+ * IT RENDERS INLINE, NOT AS A MODAL. MyGeotab injects this page into its own
+ * document, so a `position: fixed` overlay is positioned against the browser
+ * viewport and lands on top of MyGeotab's header and navigation rather than the
+ * add-in's own area. Inline is also the better interaction: the panel appears at
+ * the top of the workspace, which is where the user's eye already is because
+ * they just clicked the button.
+ *
  * Two things the modal is careful about:
  *
  *   QUOTED CONCERNS STAY QUOTED. A customer's words are rendered as a
@@ -136,7 +143,12 @@ C360.briefUi = (function () {
     function render(brief) {
         if (!brief) { return ""; }
 
-        return '<div class="c360-modal" role="dialog" aria-modal="true"'
+        /*
+         * `role="region"` with an accessible name, not `role="dialog"`. It is
+         * not modal — the workspace behind it stays readable and usable, which
+         * is the point of rendering inline.
+         */
+        return '<section class="c360-briefpanel" role="region"'
              + ' aria-labelledby="c360-brief-title">'
              + '<div class="c360-modal-head">'
              + '<div>'
@@ -148,7 +160,7 @@ C360.briefUi = (function () {
              + '<h2 class="c360-modal-title" id="c360-brief-title">'
              + esc(brief.title) + '</h2>'
              + '</div>'
-             + '<button type="button" class="c360-modal-close" id="c360-modal-close"'
+             + '<button type="button" class="c360-modal-close" id="c360-brief-close"'
              + ' aria-label="Close brief">×</button>'
              + '</div>'
 
@@ -178,7 +190,7 @@ C360.briefUi = (function () {
              + 'data-open-account="' + esc(brief.accountId) + '">Open workspace</button>'
              + '<span class="c360-ap-why" id="c360-brief-status" role="status"></span>'
              + '</div>'
-             + '</div>';
+             + '</section>';
     }
 
     return { render: render };

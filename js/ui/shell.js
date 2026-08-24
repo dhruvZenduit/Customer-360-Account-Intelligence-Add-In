@@ -1,19 +1,27 @@
 /**
- * Customer 360 — APPLICATION SHELL
- * ================================
- * The chrome: a thin icon rail, a compact command header, and the portfolio
- * status strip.
+ * Customer 360 — ADD-IN CHROME
+ * ============================
+ * The toolbar and status strip at the top of the add-in.
  *
- * All three are deliberately small. A command center is opened every morning by
- * someone who already knows what product they are in, so the chrome's job is to
- * orient and get out of the way — the workspace below it is what they came for.
- * Anything spent here is spent twice: once in pixels, and once in the attention
- * it takes to skip past.
+ * THIS IS A PANEL INSIDE MYGEOTAB, NOT AN APPLICATION.
  *
- * The rail is collapsed by default and expands on hover OR focus-within. Hover
- * alone would strand keyboard users, and the labels are always in the DOM
- * rather than being revealed by CSS, so a screen reader reads "Command Center"
- * whether or not the rail is visually open.
+ * MyGeotab injects this page into its own document. It already supplies the
+ * product frame: a left navigation rail, a header, the database name, the signed
+ * in user, breadcrumbs, and the add-in's own menu entry ("Customer 360"). So
+ * this file deliberately does NOT render:
+ *
+ *   - a left icon rail. MyGeotab has one three pixels away, and two primary
+ *     navigation rails side by side is the single clearest way to look like a
+ *     web app that got embedded by accident.
+ *   - a product wordmark or an eyebrow. "ZENDUONE / CUSTOMER INTELLIGENCE" over
+ *     the top of a page already titled Customer 360 is the add-in shouting its
+ *     own name at somebody who just clicked its menu item.
+ *   - a large screen title. The vertical space it costs is space MyGeotab's own
+ *     chrome already spent.
+ *
+ * What is left is one compact row: which view, how fresh the data is, and the
+ * four things a user does. Screen switching is a segmented control — tabs
+ * WITHIN a page, which is what these five views actually are.
  *
  * Returns HTML strings. Computes nothing.
  */
@@ -26,93 +34,71 @@ C360.shell = (function () {
     var esc = util.escapeHtml;
 
     /**
-     * The five destinations from the design.
+     * The five views.
      *
-     * `screen` is what app.js routes on. Accounts and Signals are views over the
-     * portfolio the Command Center already holds; Intelligence is the account
-     * workspace, which needs an account selected first — so it is disabled
-     * rather than hidden until there is one. A nav item that appears and
-     * disappears is harder to learn than one that is visibly not yet available.
+     * `intelligence` needs an account selected, so it is disabled rather than
+     * hidden until there is one — a tab that appears and disappears is harder
+     * to learn than one that is visibly not yet available.
      */
-    var NAV = [
-        { id: "command", icon: "◉", label: "Command Center",
-          hint: "Portfolio operations" },
-        { id: "accounts", icon: "◇", label: "Accounts",
-          hint: "Full account list" },
-        { id: "signals", icon: "◎", label: "Signals",
-          hint: "Portfolio signal feed" },
-        { id: "intelligence", icon: "◌", label: "Intelligence",
-          hint: "Account detail workspace", needsAccount: true },
-        { id: "settings", icon: "⚙", label: "Settings",
-          hint: "Scoring configuration", pinBottom: true }
+    var VIEWS = [
+        { id: "command", label: "Command", hint: "Portfolio operations" },
+        { id: "accounts", label: "Accounts", hint: "Full account list" },
+        { id: "signals", label: "Signals", hint: "Portfolio signal feed" },
+        { id: "intelligence", label: "Account", hint: "Account detail workspace",
+          needsAccount: true },
+        { id: "settings", label: "Config", hint: "Scoring configuration" }
     ];
 
-    function rail(state) {
-        var items = NAV.filter(function (item) { return !item.pinBottom; });
-        var bottom = NAV.filter(function (item) { return item.pinBottom; });
+    /** The segmented view switcher. */
+    function viewTabs(state) {
+        return '<div class="c360-views" role="tablist" aria-label="View">'
+             + VIEWS.map(function (view) {
+                   var active = state.screen === view.id;
+                   var disabled = view.needsAccount && !state.accountId
+                               && !state.selectedAccountId;
 
-        function button(item) {
-            var active = state.screen === item.id;
-            var disabled = item.needsAccount && !state.accountId;
-
-            return '<button type="button" class="c360-rail-item'
-                 + (active ? " is-active" : "") + '"'
-                 + ' data-screen="' + esc(item.id) + '"'
-                 + (disabled ? " disabled" : "")
-                 + ' aria-current="' + (active ? "page" : "false") + '"'
-                 + ' title="' + esc(item.label + " — " + item.hint) + '">'
-                 + '<span class="c360-rail-icon" aria-hidden="true">'
-                 + item.icon + '</span>'
-                 + '<span class="c360-rail-label">' + esc(item.label) + '</span>'
-                 + '</button>';
-        }
-
-        return '<div class="c360-rail-mark">'
-             + '<span class="c360-rail-glyph" aria-hidden="true">Z</span>'
-             + '<span class="c360-rail-wordmark">Zenduone</span>'
-             + '</div>'
-             + items.map(button).join("")
-             + '<div class="c360-rail-spacer"></div>'
-             + bottom.map(button).join("");
+                   return '<button type="button" role="tab"'
+                        + ' class="c360-view' + (active ? " is-active" : "") + '"'
+                        + ' data-screen="' + esc(view.id) + '"'
+                        + (disabled ? " disabled" : "")
+                        + ' aria-selected="' + active + '"'
+                        + ' title="' + esc(view.hint) + '">'
+                        + esc(view.label) + '</button>';
+               }).join("")
+             + '</div>';
     }
 
-    // -----------------------------------------------------------------
-    // Header
-    // -----------------------------------------------------------------
-
-    /** Title and subtitle per screen, so the header states where you are. */
-    var TITLES = {
-        command: { title: "Command Center", sub: "Portfolio Operations" },
-        accounts: { title: "Accounts", sub: "Full Portfolio List" },
-        signals: { title: "Signals", sub: "Portfolio Signal Feed" },
-        intelligence: { title: "Account Intelligence", sub: "Detail Workspace" },
-        settings: { title: "Settings", sub: "Scoring Configuration" }
-    };
-
     /**
-     * The header.
+     * The toolbar.
      *
-     * The clock is real and ticks; the status lamp reflects whether a refresh is
-     * in flight. "SYSTEM READY" rather than anything implying continuous
-     * processing, because nothing here runs continuously — the scoring engines
-     * run when the portfolio is refreshed and not otherwise.
+     * One row. The clock and lamp are a DATA FRESHNESS readout, not decoration:
+     * "SYSTEM READY" means the last refresh finished, "SYNCING" means one is in
+     * flight, and the timestamp beside them is when the portfolio was last
+     * scored. Nothing here implies a process that runs on its own, because
+     * nothing does.
      *
-     * The search input keeps its existing id and ARIA wiring. Phase 6 is
+     * The search input keeps its existing id and ARIA wiring — Phase 6 is
      * explicit that there must not be a second search box, so this is the same
-     * combobox moved into the header, not a new one.
+     * combobox, moved.
      */
-    function header(state) {
-        var titles = TITLES[state.screen] || TITLES.command;
+    function toolbar(state) {
         var syncing = state.refreshing || state.portfolioLoading;
 
-        var clock = '<div class="c360-cmd-clock">'
-            + '<span class="c360-cmd-time" id="c360-clock">'
-            + esc(state.clock || "--:--:--") + '</span>'
-            + '<span class="c360-cmd-status">'
-            + '<span class="c360-livedot' + (syncing ? " c360-livedot--syncing" : "")
-            + '" aria-hidden="true"></span>'
-            + (syncing ? "Syncing" : "System ready")
-            + '</span></div>';
+        var status = '<div class="c360-freshness">'
+            + '<span class="c360-freshness-lamp'
+            + (syncing ? " is-syncing" : "") + '" aria-hidden="true"></span>'
+            + '<span class="c360-freshness-text">'
+            + (syncing
+               ? "Syncing"
+               : (state.lastUpdated
+                  ? "Scored " + esc(util.formatDateTime(state.lastUpdated))
+                  : "Not yet scored"))
+            + '</span>'
+            + (state.clock
+               ? '<span class="c360-freshness-clock" id="c360-clock">'
+                 + esc(state.clock) + '</span>'
+               : "")
+            + '</div>';
 
         var search = '<div class="c360-search">'
             + '<label class="c360-visually-hidden" for="c360-search">'
@@ -125,15 +111,14 @@ C360.shell = (function () {
             + ' aria-label="Search results" hidden></ul>'
             + '</div>';
 
-        return '<div class="c360-cmd-left">'
-             + '<p class="c360-cmd-eyebrow">Zenduone / Customer Intelligence</p>'
-             + '<h1 class="c360-cmd-title">' + esc(titles.title) + '</h1>'
-             + '<p class="c360-cmd-sub">' + esc(titles.sub) + '</p>'
+        return '<div class="c360-bar-left">'
+             + viewTabs(state)
+             + status
              + '</div>'
-             + '<div class="c360-cmd-right">'
-             + clock
+             + '<div class="c360-bar-right">'
              + search
-             + '<button type="button" class="c360-button c360-button--ai" id="c360-ask-ai">'
+             + '<button type="button" class="c360-button c360-button--ai" id="c360-ask-ai"'
+             + ' aria-pressed="' + (state.aiOpen === true) + '">'
              + 'Ask Portfolio AI</button>'
              + '<button type="button" class="c360-button c360-button--quiet" '
              + 'id="c360-pf-refresh"' + (syncing ? " disabled" : "") + '>'
@@ -141,17 +126,16 @@ C360.shell = (function () {
              + '</div>';
     }
 
-    // -----------------------------------------------------------------
-    // Status strip
-    // -----------------------------------------------------------------
-
     /**
-     * Five figures, one row, monospace. Every one is computed by the pure
-     * roll-up; there is no placeholder path in this function.
+     * The portfolio status strip: five figures, one row, monospace.
      *
-     * ARR states its coverage when it does not cover the whole portfolio.
-     * `$6.0M PORTFOLIO` implies all 26 accounts; if only 24 record a contract
-     * value, saying so is the difference between a figure and a claim.
+     * Not five KPI cards. Cards would take four times the vertical space to say
+     * the same thing, and vertical space inside an embedded panel is the
+     * scarcest thing there is.
+     *
+     * ARR states its own coverage. `$8.2M PORTFOLIO` implies all 26 accounts; if
+     * only 24 record a contract value, saying so is the difference between a
+     * figure and a claim.
      */
     function strip(view) {
         if (!view || view.empty) { return ""; }
@@ -184,7 +168,14 @@ C360.shell = (function () {
              + '</p>';
     }
 
-    /** Live clock text. The one place in the UI that reads the wall clock. */
+    /**
+     * Clock text.
+     *
+     * The one place in the interface that reads the wall clock — and the timer
+     * behind it runs only while the add-in has focus. See `app.suspend()`: an
+     * interval that survives navigating away is a leak that compounds every
+     * time the user comes back.
+     */
     function clockText(date) {
         var d = util.toDate(date) || new Date();
         var hours = d.getHours();
@@ -199,11 +190,10 @@ C360.shell = (function () {
     }
 
     return {
-        rail: rail,
-        header: header,
+        toolbar: toolbar,
+        viewTabs: viewTabs,
         strip: strip,
         clockText: clockText,
-        NAV: NAV,
-        TITLES: TITLES
+        VIEWS: VIEWS
     };
 }());

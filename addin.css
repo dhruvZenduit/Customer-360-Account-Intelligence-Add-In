@@ -130,13 +130,33 @@
     --c360-radius: 6px;
     --c360-gap: 16px;
 
-    /* Chrome dimensions, referenced by the shell layout. */
-    --c360-rail: 52px;
-    --c360-rail-open: 208px;
+    /* Horizontal padding, so every band lines up down the panel. */
+    --c360-pad: 18px;
 
+    /*
+     * ADD-IN BOX, NOT A PAGE.
+     *
+     * `position: relative` so anything absolutely positioned inside is
+     * positioned against the ADD-IN rather than the browser window. That one
+     * property is what keeps the search results and the matrix tooltips
+     * anchored to our own box instead of to MyGeotab's viewport — and with no
+     * `position: fixed` left anywhere in this file, it is sufficient.
+     *
+     * Deliberately NOT `overflow: hidden`. Clipping the add-in to its own box
+     * sounds safer and is not: on a short view — an error state, an empty
+     * portfolio — it would cut the search dropdown off mid-list. A dropdown
+     * that extends past the panel's bottom edge is ordinary behaviour and is
+     * what MyGeotab's own menus do.
+     *
+     * No `min-height: 100vh`. MyGeotab injects this into its own page, where a
+     * viewport-height block would either leave a black band under short content
+     * or make MyGeotab's layout scroll twice. `min-height: 100%` fills whatever
+     * container we are given and no more.
+     */
+    position: relative;
     box-sizing: border-box;
-    min-height: 100vh;
-    padding: 0;
+    min-height: 100%;
+    padding: 0 0 20px;
     margin: 0;
 
     background: var(--c360-bg);
@@ -150,8 +170,13 @@
     /*
      * BACKGROUND TREATMENT. A faint technical grid plus two very low-opacity
      * radial washes. Deliberately near-invisible — its whole job is to stop a
-     * near-black page reading as an empty void, and the moment it is
-     * noticeable it is competing with the data. Nothing here exceeds 4%.
+     * near-black panel reading as an empty void, and the moment it is
+     * noticeable it is competing with the data. Nothing here exceeds 6%.
+     *
+     * `background-attachment: local` rather than `fixed`: fixed anchors the
+     * pattern to the browser viewport, so the grid slides under the content as
+     * MyGeotab's page scrolls. Local scrolls it with the add-in, which is the
+     * only behaviour that looks deliberate.
      */
     background-image:
         radial-gradient(900px 500px at 12% -8%, rgba(59, 130, 246, 0.055), transparent 70%),
@@ -159,8 +184,20 @@
         linear-gradient(rgba(148, 163, 184, 0.028) 1px, transparent 1px),
         linear-gradient(90deg, rgba(148, 163, 184, 0.028) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 100% 34px, 34px 100%;
-    background-attachment: fixed;
+    background-attachment: local;
 }
+
+/*
+ * `hidden` MUST WIN. The attribute is honoured only by `[hidden] { display:
+ * none }` in the UA stylesheet, and author styles beat the UA stylesheet
+ * regardless of specificity — so any rule here that sets `display` on a class
+ * silently defeats it. Several elements are toggled by `.hidden` from JS and
+ * also carry such a class (.c360-drawer, .c360-strip, .c360-toolbar,
+ * .c360-scorecard-block), which once left the brief's scrim painted over the
+ * whole add-in and eating every click. This is declared once, high, with
+ * !important, so the same trap cannot be re-set by a later rule.
+ */
+#c360-app [hidden] { display: none !important; }
 
 /* Selection has to be legible on a dark ground. */
 #c360-app ::selection {
@@ -245,9 +282,6 @@
     padding: 14px 24px;
     background: var(--c360-surface);
     border-bottom: 1px solid var(--c360-border);
-    position: sticky;
-    top: 0;
-    z-index: 30;
 }
 
 .c360-brand {
@@ -2859,235 +2893,97 @@
 }
 
 /* ================================================================== */
-/* APPLICATION SHELL                                                  */
+/* ADD-IN CHROME                                                      */
 /* ================================================================== */
 /*
- * A thin icon rail, a compact command header, and then the workspace gets
- * everything else. Optimised for 1440px: at that width the three-panel
- * workspace is the majority of the screen and the chrome is under 120px tall.
+ * One compact toolbar and a status strip. No navigation rail and no product
+ * header: MyGeotab supplies both, and duplicating them is what makes an add-in
+ * look like a web app somebody embedded by accident.
  *
- * There is no hero header. A command center that spends 200px telling you its
- * own name is a command center you scroll past every morning.
+ * Nothing here is sticky. `position: sticky` inside an injected add-in sticks
+ * to the BROWSER viewport, so the toolbar would float up over MyGeotab's own
+ * header as the page scrolls. The toolbar is short enough that scrolling past
+ * it is not a problem worth introducing that one for.
  */
 
-.c360-appshell {
-    display: flex;
-    align-items: stretch;
-    min-height: 100vh;
-}
-
-/* ---- left rail ---------------------------------------------------- */
-/*
- * Collapsed to 52px, expanding to 208px on hover or focus-within. Hover alone
- * would strand keyboard users, so focus-within opens it too and the labels are
- * always in the DOM for screen readers rather than being revealed by CSS.
- */
-
-.c360-rail {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: none;
-    width: var(--c360-rail);
-    height: 100vh;
-    padding: 12px 8px;
-    background: var(--c360-surface);
-    border-right: 1px solid var(--c360-border);
-    overflow: hidden;
-    transition: width 200ms ease;
-}
-
-.c360-rail:hover,
-.c360-rail:focus-within { width: var(--c360-rail-open); }
-
-.c360-rail-mark {
+.c360-bar {
     display: flex;
     align-items: center;
-    gap: 10px;
-    height: 34px;
-    padding: 0 7px;
-    margin-bottom: 10px;
-    flex: none;
-}
-
-.c360-rail-glyph {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    flex: none;
-    font-family: var(--c360-mono);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--c360-on-accent);
-    background: var(--c360-accent);
-    border-radius: 5px;
-}
-
-.c360-rail-wordmark {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--c360-text-muted);
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 160ms ease;
-}
-
-.c360-rail:hover .c360-rail-wordmark,
-.c360-rail:focus-within .c360-rail-wordmark { opacity: 1; }
-
-.c360-rail-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    height: 36px;
-    padding: 0 8px;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 550;
-    color: var(--c360-text-faint);
-    background: transparent;
-    border: 0;
-    border-radius: 5px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 150ms ease, color 150ms ease;
-}
-
-.c360-rail-item:hover:not(:disabled) {
-    color: var(--c360-text);
-    background: var(--c360-surface-alt);
-}
-
-.c360-rail-item.is-active {
-    color: var(--c360-text);
-    background: var(--c360-accent-soft);
-}
-
-/* The 2px active marker, so the current screen is not colour-only. */
-.c360-rail-item.is-active::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    width: 2px;
-    height: 20px;
-    background: var(--c360-accent);
-    border-radius: 0 2px 2px 0;
-}
-
-.c360-rail-item { position: relative; }
-.c360-rail-item:disabled { opacity: 0.35; cursor: default; }
-
-.c360-rail-icon {
-    display: grid;
-    place-items: center;
-    width: 20px;
-    flex: none;
-    font-size: 13px;
-    line-height: 1;
-}
-
-.c360-rail-label {
-    opacity: 0;
-    transition: opacity 160ms ease;
-}
-
-.c360-rail:hover .c360-rail-label,
-.c360-rail:focus-within .c360-rail-label { opacity: 1; }
-
-.c360-rail-spacer { flex: 1 1 auto; }
-
-/* ---- workspace column -------------------------------------------- */
-
-.c360-shell {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 40px;
-}
-
-/* ---- command header ---------------------------------------------- */
-
-.c360-cmdhead {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    display: flex;
-    align-items: flex-end;
     justify-content: space-between;
-    gap: 20px;
+    gap: 14px;
     flex-wrap: wrap;
-    padding: 14px 22px 12px;
-    background: rgba(8, 11, 16, 0.86);
-    backdrop-filter: blur(10px);
+    padding: 9px var(--c360-pad);
+    background: var(--c360-surface);
     border-bottom: 1px solid var(--c360-border);
 }
 
-.c360-cmd-eyebrow {
-    font-family: var(--c360-mono);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--c360-text-faint);
-}
-
-.c360-cmd-title {
-    margin-top: 3px;
-    font-size: 20px;
-    font-weight: 680;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    line-height: 1.1;
-}
-
-.c360-cmd-sub {
-    margin-top: 1px;
-    font-size: 12px;
-    color: var(--c360-text-muted);
-}
-
-.c360-cmd-right {
+.c360-bar-left,
+.c360-bar-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
-.c360-cmd-clock {
-    text-align: right;
-    line-height: 1.3;
+/* ---- view tabs ---------------------------------------------------- */
+/*
+ * A segmented control, because these five ARE tabs within one page. Rendering
+ * them as an icon rail would claim they are application-level destinations,
+ * which is MyGeotab's job and not ours.
+ */
+
+.c360-views {
+    display: inline-flex;
+    padding: 2px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: 6px;
 }
 
-.c360-cmd-time {
-    display: block;
-    font-family: var(--c360-mono);
-    font-size: 15px;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
+.c360-view {
+    padding: 5px 11px;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--c360-text-faint);
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 150ms ease, background 150ms ease;
+}
+
+.c360-view:hover:not(:disabled):not(.is-active) {
     color: var(--c360-text);
+    background: var(--c360-surface-raised);
 }
 
-.c360-cmd-status {
+.c360-view.is-active {
+    color: var(--c360-text);
+    background: var(--c360-surface-raised);
+    box-shadow: inset 0 0 0 1px var(--c360-border-strong);
+}
+
+.c360-view:disabled { opacity: 0.38; cursor: default; }
+
+/* ---- data freshness ----------------------------------------------- */
+/*
+ * A freshness readout, not a decorative status light. The lamp says whether a
+ * refresh is in flight; the text says when the portfolio was last scored.
+ * Neither implies anything runs on its own, because nothing does.
+ */
+
+.c360-freshness {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 5px;
-    font-family: var(--c360-mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--c360-text-faint);
+    gap: 7px;
+    min-width: 0;
 }
 
-.c360-livedot {
+.c360-freshness-lamp {
     width: 6px;
     height: 6px;
     flex: none;
@@ -3096,18 +2992,57 @@
     box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
 }
 
-.c360-livedot--syncing {
+.c360-freshness-lamp.is-syncing {
     background: var(--c360-watch);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
 }
 
-/* ---- header search ------------------------------------------------ */
+.c360-freshness-text {
+    font-size: 10.5px;
+    color: var(--c360-text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-.c360-cmdhead .c360-search { position: relative; width: 232px; }
+.c360-freshness-clock {
+    font-family: var(--c360-mono);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--c360-text-muted);
+    white-space: nowrap;
+}
+
+/* ---- body grid ---------------------------------------------------- */
+/*
+ * One column, becoming two when the Portfolio AI panel opens. The workspace
+ * narrows; nothing is covered. That is the whole reason the panel is a grid
+ * column rather than a drawer — a `position: fixed` drawer inside an injected
+ * add-in covers MyGeotab, not the add-in.
+ */
+
+.c360-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+}
+
+.c360-body.is-aside {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 364px);
+    gap: 12px;
+    padding-right: var(--c360-pad);
+}
+
+.c360-main { min-width: 0; }
+
+/* ---- search ------------------------------------------------------- */
+
+.c360-bar .c360-search { position: relative; width: 224px; }
 
 .c360-search-input {
     width: 100%;
-    padding: 7px 10px;
+    padding: 6px 10px;
     font: inherit;
     font-size: 12px;
     color: var(--c360-text);
@@ -3124,19 +3059,26 @@
     background: var(--c360-surface-raised);
 }
 
+/*
+ * The results list is absolute inside the search box, and the box is inside
+ * `#c360-app` — which is `position: relative` and `overflow: hidden`, so the
+ * list can never spill onto MyGeotab's interface. `max-height` is in pixels
+ * rather than `vh` for the same reason: viewport units describe the browser
+ * window, not the panel we were given.
+ */
 .c360-search-results {
     position: absolute;
     top: calc(100% + 5px);
     right: 0;
     z-index: 40;
-    width: 340px;
-    max-height: 60vh;
+    width: 330px;
+    max-height: 340px;
     overflow-y: auto;
     padding: 5px;
     background: var(--c360-surface-raised);
     border: 1px solid var(--c360-border-strong);
     border-radius: var(--c360-radius);
-    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
 }
 
 .c360-result {
@@ -3164,11 +3106,11 @@
     color: var(--c360-text-faint);
 }
 
-/* ---- button variants for the dark shell -------------------------- */
+/* ---- buttons ------------------------------------------------------ */
 
 .c360-button {
-    padding: 7px 12px;
-    font-size: 12px;
+    padding: 6px 11px;
+    font-size: 11.5px;
     font-weight: 600;
     border-radius: 5px;
     transition: background 150ms ease, border-color 150ms ease;
@@ -3222,7 +3164,7 @@
     align-items: stretch;
     gap: 0;
     flex-wrap: wrap;
-    padding: 0 22px;
+    padding: 0 var(--c360-pad);
     background: var(--c360-surface);
     border-bottom: 1px solid var(--c360-border);
 }
@@ -3288,7 +3230,7 @@
     grid-template-columns: minmax(268px, 0.9fr) minmax(0, 1.5fr) minmax(280px, 1fr);
     gap: 12px;
     align-items: start;
-    padding: 12px 22px 0;
+    padding: 12px var(--c360-pad) 0;
 }
 
 .c360-panel {
@@ -3992,7 +3934,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
-    padding: 0 22px;
+    padding: 0 var(--c360-pad);
     margin-top: 14px;
 }
 
@@ -4284,7 +4226,7 @@
 /* ACCOUNT DETAIL WORKSPACE                                           */
 /* ================================================================== */
 
-.c360-aw { padding: 14px 22px 0; }
+.c360-aw { padding: 14px var(--c360-pad) 0; }
 
 .c360-aw-back {
     display: inline-flex;
@@ -4426,28 +4368,35 @@
 .c360-act-text { margin-top: 2px; font-size: 11.5px; }
 
 /* ================================================================== */
-/* BRIEF MODAL                                                        */
+/* BRIEF PANEL                                                        */
 /* ================================================================== */
+/*
+ * Inline, at the top of the workspace. Not a modal.
+ *
+ * A `position: fixed` overlay is positioned against the browser viewport, so
+ * inside an injected add-in it covers MyGeotab's header and navigation rather
+ * than the add-in's own area. Inline is also the better interaction: the panel
+ * appears where the user is already looking, and the workspace behind it stays
+ * readable — which matters, because the brief is about the account that is
+ * still on screen.
+ *
+ * The accent left border and the shadow are what make it read as "this just
+ * opened" without a scrim.
+ */
 
-.c360-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 90;
-    display: grid;
-    place-items: start center;
-    padding: 40px 20px;
-    overflow-y: auto;
-    background: rgba(4, 6, 10, 0.76);
-    backdrop-filter: blur(3px);
-}
-
-.c360-modal {
-    width: 100%;
-    max-width: 720px;
+.c360-briefpanel {
+    margin: 12px var(--c360-pad) 0;
     background: var(--c360-surface);
     border: 1px solid var(--c360-border-strong);
-    border-radius: 10px;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.72);
+    border-left: 2px solid var(--c360-accent);
+    border-radius: 8px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4);
+    animation: c360-drop 200ms ease;
+}
+
+@keyframes c360-drop {
+    from { transform: translateY(-6px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
 }
 
 .c360-modal-head {
@@ -4598,24 +4547,27 @@
  * covering it up would make the panel harder to act on, not easier.
  */
 
+/*
+ * A grid column, not a drawer over the page.
+ *
+ * `position: fixed` would pin it to the browser window and cover MyGeotab. As a
+ * column the workspace narrows to make room, the dashboard stays visible and
+ * clickable, and there is no z-index to lose an argument with.
+ */
 .c360-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 80;
     display: flex;
     flex-direction: column;
-    width: 404px;
-    max-width: 92vw;
+    max-height: 720px;
+    margin-top: 12px;
     background: var(--c360-surface);
-    border-left: 1px solid var(--c360-border-strong);
-    box-shadow: -22px 0 60px rgba(0, 0, 0, 0.62);
-    animation: c360-slidein 220ms ease;
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    animation: c360-slidein 200ms ease;
 }
 
 @keyframes c360-slidein {
-    from { transform: translateX(22px); opacity: 0; }
+    from { transform: translateX(10px); opacity: 0; }
     to   { transform: translateX(0); opacity: 1; }
 }
 
@@ -4840,22 +4792,27 @@
     color: var(--c360-mock);
 }
 
-/* Legacy dashboard sections, re-fitted to the dark shell. */
-.c360-content { max-width: none; padding: 0 22px; }
-.c360-scorecard-block { max-width: none; padding: 0 22px; }
+/* Legacy dashboard sections, re-fitted to the add-in shell. */
+.c360-content { max-width: none; padding: 0 var(--c360-pad); }
+.c360-scorecard-block { max-width: none; padding: 0 var(--c360-pad); }
 .c360-portfolio { max-width: none; padding: 0; }
 .c360-account-header,
 .c360-source-status,
-.c360-toolbar { padding-left: 22px; padding-right: 22px; }
+.c360-toolbar {
+    padding-left: var(--c360-pad);
+    padding-right: var(--c360-pad);
+}
 
 .c360-footer {
     max-width: none;
-    padding: 18px 22px 0;
-    margin-top: 22px;
+    padding: 16px var(--c360-pad) 0;
+    margin-top: 20px;
     border-top: 1px solid var(--c360-border);
     font-size: 11px;
     color: var(--c360-text-faint);
 }
+
+.c360-mock-banner { padding-left: var(--c360-pad); padding-right: var(--c360-pad); }
 
 /* ================================================================== */
 /* RESPONSIVE                                                         */
@@ -4880,18 +4837,27 @@
     .c360-panel-scroll { max-height: 380px; }
 }
 
+/*
+ * The AI column folds under the workspace before it gets too narrow to read.
+ * An add-in panel can be a lot narrower than a browser window, so this
+ * threshold is about the panel, not the device.
+ */
+@media (max-width: 1120px) {
+    .c360-body.is-aside {
+        grid-template-columns: minmax(0, 1fr);
+        padding-right: 0;
+    }
+    .c360-drawer { margin: 12px var(--c360-pad) 0; max-height: none; }
+}
+
 @media (max-width: 720px) {
-    .c360-rail { position: fixed; height: 100vh; }
-    .c360-shell { padding-left: var(--c360-rail); }
-    .c360-cmdhead { padding: 12px 14px; }
-    .c360-cc, .c360-queues, .c360-aw { padding-left: 14px; padding-right: 14px; }
-    .c360-strip { padding: 0 14px; }
-    .c360-content, .c360-scorecard-block { padding: 0 14px; }
+    #c360-app { --c360-pad: 12px; }
+    .c360-bar { padding: 8px var(--c360-pad); }
     .c360-figs { grid-template-columns: minmax(0, 1fr); }
     .c360-fig { border-right: 0; border-bottom: 1px solid var(--c360-border); }
-    .c360-cmdhead .c360-search { width: 100%; }
+    .c360-bar .c360-search { width: 100%; }
     .c360-search-results { width: 100%; }
-    .c360-drawer { width: 100%; }
+    .c360-views { width: 100%; overflow-x: auto; }
 }
 
 /*

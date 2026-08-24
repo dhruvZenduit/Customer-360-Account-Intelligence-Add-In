@@ -52,7 +52,14 @@ function makeElement(id) {
         querySelectorAll: function () { return []; },
         querySelector: function () { return null; },
         closest: function () { return null; },
-        scrollIntoView: function () {}
+        scrollIntoView: function () {},
+        // app.js toggles a class on the body grid to open the AI column.
+        classList: {
+            _set: {},
+            add: function (name) { this._set[name] = true; },
+            remove: function (name) { delete this._set[name]; },
+            contains: function (name) { return this._set[name] === true; }
+        }
     };
 }
 
@@ -61,9 +68,10 @@ const elements = {};
     "c360-app", "c360-mock-banner",
     "c360-account-header", "c360-toolbar", "c360-source-status",
     "c360-content", "c360-error",
-    // Command-center shell.
-    "c360-rail", "c360-cmdhead", "c360-strip", "c360-portfolio",
-    "c360-scorecard-block", "c360-modal", "c360-aidrawer"
+    // Add-in chrome and panels. No rail and no modal: MyGeotab supplies the
+    // navigation, and the brief renders inline rather than as an overlay.
+    "c360-cmdhead", "c360-strip", "c360-body", "c360-brief",
+    "c360-portfolio", "c360-scorecard-block", "c360-aidrawer"
 ].forEach((id) => { elements[id] = makeElement(id); });
 
 /*
@@ -98,9 +106,6 @@ sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
 sandbox.location = { href: "http://localhost/index.html", pathname: "/index.html", search: "", hash: "" };
 sandbox.window.location = sandbox.location;
-// app.js reflects filter + sort state into the URL. Stubbed rather than omitted
-// so the syncUrl() path is actually exercised.
-sandbox.window.history = { replaceState: function () {} };
 
 const storage = new Map();
 sandbox.window.sessionStorage = {
@@ -114,25 +119,47 @@ sandbox.document = {
     addEventListener: function () {}
 };
 
-// The header carries a live clock, so app.js sets an interval. Stubbed rather
-// than left undefined: an unhandled ReferenceError here would mask whatever the
-// test was actually checking.
-sandbox.setInterval = function () { return 0; };
-sandbox.clearInterval = function () {};
+/*
+ * Timers and URL writes are RECORDED, not just stubbed.
+ *
+ * The two things most likely to be wrong in an add-in are a timer that outlives
+ * a blur and a write to a URL the host owns. Neither shows up as an exception,
+ * so the stubs count them and the lifecycle assertions check the counts.
+ */
+sandbox._intervals = [];
+sandbox._cleared = [];
+sandbox._urlWrites = [];
+
+sandbox.setInterval = function (fn, ms) {
+    var handle = sandbox._intervals.length + 1;
+    sandbox._intervals.push({ handle: handle, ms: ms });
+    return handle;
+};
+sandbox.clearInterval = function (handle) { sandbox._cleared.push(handle); };
+
+sandbox.window.history = {
+    replaceState: function (a, b, url) { sandbox._urlWrites.push(url); }
+};
+
 sandbox.navigator = { clipboard: undefined };
 sandbox.window.navigator = sandbox.navigator;
 
 vm.createContext(sandbox);
 
-// Same order as index.html, minus addin.js (the MyGeotab lifecycle, which is
-// driven by MyGeotab rather than by this test).
+/*
+ * Every script index.html loads, in the same order — INCLUDING addin.js.
+ *
+ * It used to be excluded on the grounds that MyGeotab drives it. But the
+ * lifecycle is exactly the part of an add-in most likely to be wrong, and the
+ * only way to test that blur() really stops the clock is to call the real
+ * blur(). Its DOMContentLoaded fallback is inert here because the document stub
+ * does not dispatch events.
+ */
 const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const scripts = [];
 const re = /<script\s+src="([^"]+)"><\/script>/g;
 let hit;
-while ((hit = re.exec(html)) !== null) {
-    if (hit[1] !== "js/addin.js") { scripts.push(hit[1]); }
-}
+while ((hit = re.exec(html)) !== null) { scripts.push(hit[1]); }
 
 scripts.forEach((src) => {
     vm.runInContext(fs.readFileSync(path.join(ROOT, src), "utf8"), sandbox, { filename: src });
@@ -173,34 +200,44 @@ async function run() {
     check("app marks itself started",
         elements["c360-app"].getAttribute("data-started") === "true");
 
-    // ---- the shell ---------------------------------------------------
-    const rail = elements["c360-rail"].innerHTML;
-    check("the navigation rail renders every destination",
-        rail.indexOf("Command Center") !== -1 && rail.indexOf("Accounts") !== -1
-        && rail.indexOf("Signals") !== -1 && rail.indexOf("Intelligence") !== -1
-        && rail.indexOf("Settings") !== -1);
-    check("the rail marks the current screen",
-        rail.indexOf('aria-current="page"') !== -1);
-    check("the Intelligence destination is disabled until an account is chosen",
-        rail.indexOf("disabled") !== -1);
-    check("rail labels are in the DOM, not revealed only by CSS",
-        rail.indexOf("c360-rail-label") !== -1);
-
+    // ---- add-in chrome ----------------------------------------------
+    //
+    // The add-in must NOT re-create MyGeotab's own product frame. These
+    // assertions are as much about what is absent as what is present.
     const head = elements["c360-cmdhead"].innerHTML;
-    check("the header shows the product line",
-        head.indexOf("Customer Intelligence") !== -1);
-    check("the header shows the screen title",
-        head.indexOf("Command Center") !== -1);
-    check("the header shows a live clock", head.indexOf('id="c360-clock"') !== -1);
-    check("the header shows a system status lamp",
-        head.indexOf("c360-livedot") !== -1);
-    check("the header carries the single search combobox",
+
+    check("the toolbar renders a segmented view switcher",
+        head.indexOf("c360-views") !== -1 && head.indexOf('role="tablist"') !== -1);
+    check("it offers all five views",
+        head.indexOf(">Command<") !== -1 && head.indexOf(">Accounts<") !== -1
+        && head.indexOf(">Signals<") !== -1 && head.indexOf(">Account<") !== -1
+        && head.indexOf(">Config<") !== -1);
+    check("the current view is marked selected",
+        head.indexOf('aria-selected="true"') !== -1);
+    check("the Account view is disabled until an account is chosen",
+        head.indexOf("disabled") !== -1);
+
+    check("there is NO navigation rail — MyGeotab supplies one",
+        head.indexOf("c360-rail") === -1);
+    check("there is NO product wordmark or eyebrow",
+        head.indexOf("Zenduone") === -1
+        && head.indexOf("Customer Intelligence") === -1);
+    check("there is NO large screen title competing with MyGeotab's header",
+        head.indexOf("c360-cmd-title") === -1);
+
+    check("the toolbar shows a data-freshness readout",
+        head.indexOf("c360-freshness") !== -1);
+    check("the freshness lamp is present", head.indexOf("c360-freshness-lamp") !== -1);
+    check("the toolbar carries the single search combobox",
         head.indexOf('id="c360-search"') !== -1
         && head.indexOf('role="combobox"') !== -1);
-    check("the header offers Portfolio AI", head.indexOf("Ask Portfolio AI") !== -1);
-    check("the header offers Refresh", head.indexOf('id="c360-pf-refresh"') !== -1);
-    check("the search input is bound after the header renders",
+    check("the toolbar offers Portfolio AI", head.indexOf("Ask Portfolio AI") !== -1);
+    check("the toolbar offers Refresh", head.indexOf('id="c360-pf-refresh"') !== -1);
+    check("the search input is bound after the toolbar renders",
         (elements["c360-search"]._listeners.input || []).length === 1);
+
+    check("the clock is rendered once a tick has run",
+        head.indexOf('id="c360-clock"') !== -1);
 
     check("the workspace shows a scoring state while the portfolio loads",
         elements["c360-portfolio"].innerHTML.indexOf("Scoring the portfolio") !== -1);
@@ -360,9 +397,11 @@ async function run() {
     C360.app.askAi("Who should I contact today?");
 
     const drawer = elements["c360-aidrawer"].innerHTML;
-    check("the AI drawer opens", elements["c360-aidrawer"].hidden === false);
-    check("it is a drawer, not a takeover",
+    check("the AI panel opens", elements["c360-aidrawer"].hidden === false);
+    check("the workspace stays rendered behind it, not covered",
         elements["c360-portfolio"].innerHTML.length > 0);
+    check("the body grid narrows to make room rather than overlaying",
+        elements["c360-body"].classList.contains("is-aside") === true);
     check("the answer references real accounts",
         drawer.indexOf("c360-aref") !== -1);
     check("the answer shows how it was derived", drawer.indexOf("How:") !== -1);
@@ -377,7 +416,9 @@ async function run() {
         elements["c360-aidrawer"].innerHTML.indexOf("What this panel can answer") !== -1);
 
     C360.app.closeAi();
-    check("closing the drawer hides it", elements["c360-aidrawer"].hidden === true);
+    check("closing the panel hides it", elements["c360-aidrawer"].hidden === true);
+    check("and the body grid returns to one column",
+        elements["c360-body"].classList.contains("is-aside") === false);
 
     // =================================================================
     // Generate Brief
@@ -385,8 +426,13 @@ async function run() {
     const briefTarget = C360.app._state.portfolioView.urgent[0];
     C360.app.openBrief(briefTarget.accountId);
 
-    const brief = elements["c360-modal"].innerHTML;
-    check("the brief modal opens", elements["c360-modal"].hidden === false);
+    const brief = elements["c360-brief"].innerHTML;
+    check("the brief panel opens", elements["c360-brief"].hidden === false);
+    check("it renders inline, not as a fixed overlay",
+        brief.indexOf("c360-briefpanel") !== -1
+        && brief.indexOf('role="dialog"') === -1);
+    check("the workspace behind it stays readable",
+        elements["c360-portfolio"].innerHTML.length > 0);
     check("the brief has a situation section", brief.indexOf("Situation") !== -1);
     check("the brief states why it matters", brief.indexOf("Why it matters") !== -1);
     check("the brief lists customer concerns",
@@ -409,7 +455,7 @@ async function run() {
         briefText.indexOf("Sample data") !== -1);
 
     C360.app.closeBrief();
-    check("closing the brief hides the modal", elements["c360-modal"].hidden === true);
+    check("closing the brief hides the panel", elements["c360-brief"].hidden === true);
 
     // =================================================================
     // Account detail workspace
@@ -555,6 +601,70 @@ async function run() {
     const recent = JSON.parse(storage.get("c360:recent-accounts") || "[]");
     check("viewed accounts are remembered", recent.length >= 2, JSON.stringify(recent));
     check("the most recent account is first", recent[0].id === "acc-004");
+
+    // =================================================================
+    // MyGeotab lifecycle
+    // =================================================================
+    // focus/blur fire on EVERY navigation, not once. An add-in that leaves
+    // things running accumulates one leak per visit, so blur has to actually
+    // stop them.
+
+    const addin = sandbox.geotab.addin.customer360();
+    check("the add-in exposes the MyGeotab lifecycle",
+        typeof addin.initialize === "function"
+        && typeof addin.focus === "function"
+        && typeof addin.blur === "function");
+
+    // Open both panels, then navigate away.
+    C360.app.askAi("Who should I contact today?");
+    C360.app.openBrief("acc-004");
+    check("both panels are open before blur",
+        elements["c360-aidrawer"].hidden === false
+        && elements["c360-brief"].hidden === false);
+
+    const intervalsBefore = sandbox._intervals.length;
+    addin.blur();
+
+    check("blur closes the AI panel", C360.app._state.aiOpen === false);
+    check("blur closes the brief", C360.app._state.brief === null);
+    check("blur clears the clock interval",
+        sandbox._cleared.length > 0);
+
+    // focus() must restart, and must not stack a second timer.
+    addin.focus(null, {});
+    check("focus restarts the clock",
+        sandbox._intervals.length === intervalsBefore + 1,
+        "intervals set: " + sandbox._intervals.length);
+    check("focus re-renders the chrome",
+        elements["c360-cmdhead"].innerHTML.indexOf("c360-views") !== -1);
+
+    // Repeated focus/blur cycles must not accumulate timers.
+    const cyclesStart = sandbox._intervals.length - sandbox._cleared.length;
+    for (let i = 0; i < 5; i++) { addin.blur(); addin.focus(null, {}); }
+    const cyclesEnd = sandbox._intervals.length - sandbox._cleared.length;
+    check("five focus/blur cycles leave the same number of live timers",
+        cyclesEnd === cyclesStart,
+        cyclesStart + " -> " + cyclesEnd);
+
+    check("blur drops the MyGeotab api reference",
+        C360.geotabService.isAvailable() === false);
+
+    // =================================================================
+    // The add-in must not write to the URL while embedded
+    // =================================================================
+    const urlWritesBefore = sandbox._urlWrites.length;
+    C360.app._state.embedded = true;
+    C360.app.toggleFilter("queue", "save");
+    check("filtering does not touch the URL while embedded",
+        sandbox._urlWrites.length === urlWritesBefore,
+        sandbox._urlWrites.length + " writes");
+
+    C360.app._state.embedded = false;
+    C360.app.toggleFilter("queue", "fix");
+    check("but it does round-trip through the URL when standalone",
+        sandbox._urlWrites.length > urlWritesBefore);
+
+    C360.app.clearFilters();
 
     report();
 }

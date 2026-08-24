@@ -1,7 +1,7 @@
-# Customer 360 — Command Center
+# Customer 360 — MyGeotab add-in
 
-A dark, high-density customer-intelligence workspace for a MyGeotab add-in. It
-answers one question, in one screen, in this order:
+A dark, high-density customer-intelligence panel that runs **inside MyGeotab**.
+It answers one question, in one screen, in this order:
 
 > **Who should I care about today, why, how urgent, what should I do — and can I
 > do it from here?**
@@ -96,7 +96,7 @@ anywhere — there is a test for that too.
 | **AI layer** | **OFF** (`scorecardConfig.ai.enabled: false`). The product is fully functional without it. |
 | **Outbound actions** | **NONE POSSIBLE.** `approval.sendingEnabled: false`, and exactly one code path could ever send anything. |
 | **Build** | No build step. Static files, no dependencies, no framework. |
-| **Tests** | 1,027 checks across three suites, all passing (730 logic + 123 app shell + 174 wiring) |
+| **Tests** | 1,057 checks across three suites, all passing (730 logic + 140 app shell + 187 wiring) |
 
 While any source is mocked, a banner across the top of the dashboard says so,
 and every invented record carries a `MOCK` badge. Nothing on the page can be
@@ -104,28 +104,104 @@ mistaken for a real customer record.
 
 ---
 
-## Why there is no React or Tailwind here
+## It is an add-in, not an application
 
-Worth stating plainly, because a dark high-density workspace is exactly the kind
-of thing you would normally reach for a framework to build.
+MyGeotab injects this page into **its own document**. That single fact drives
+most of the structural decisions here, and getting it wrong produces a specific
+and embarrassing failure: an add-in that paints over MyGeotab's header, which
+users report as a bug in MyGeotab.
 
-MyGeotab injects this page into **its own document**. That is why every selector
-in `addin.css` is scoped under `#c360-app` and every id and class is prefixed
-`c360-`. A utility framework's global preflight would reset MyGeotab's own
-interface, not just this page — and the fix for that is to scope the framework,
-at which point it is doing less than the 900 lines of tokenised CSS it replaced.
+### What the add-in does not own
+
+| | Why |
+| --- | --- |
+| **The viewport** | Nothing is `100vh` and nothing is `position: fixed`. Both resolve against the browser window, not the panel MyGeotab gave us. The add-in is `position: relative` and sizes to its content. |
+| **The URL** | MyGeotab's router owns `window.location` (hash-based, `#ActivityLink,…`). Writing filter state into it fights that router, so `syncUrl()` is a no-op while embedded and view state is held in memory. Standalone, it still round-trips. |
+| **The chrome** | No navigation rail, no product wordmark, no large screen title. MyGeotab already supplies the left nav, the header, the database name, the signed-in user and this add-in's menu entry. A second left rail three pixels from MyGeotab's is the clearest sign of a web app that got embedded by accident. |
+| **The keyboard** | The key handler is bound to `#c360-app`, not `document`, so Escape belongs to whichever MyGeotab dialog is open when the user is not in the add-in. |
+| **The network** | No webfonts, no CDN. The type stack prefers Inter and JetBrains Mono if the machine has them and falls back to system faces. A third-party request from inside a customer's MyGeotab is subject to their CSP and is a dependency the page does not need. |
+
+### Panels instead of overlays
+
+Two things used to be overlays and are not any more, because a fixed overlay
+inside an injected add-in covers the host rather than the add-in:
+
+- **The brief** renders inline at the top of the workspace. Better interaction
+  anyway: it appears where the user is already looking, since they just clicked
+  Generate Brief, and the account behind it stays readable.
+- **Portfolio AI** is a second grid column. The workspace narrows; nothing is
+  covered, and there is no z-index to lose an argument with.
+
+### The lifecycle actually tears down
+
+`focus()` and `blur()` fire on **every** navigation, not once. An add-in that
+treats `initialize()` as its only entry point accumulates a timer, a listener or
+an in-flight request per visit — and the symptom is a MyGeotab session that gets
+slower the longer somebody works in it.
+
+```text
+initialize  →  wire the DOM, score the portfolio, take the api object
+focus       →  restart the clock, re-render, take a fresh api object
+blur        →  stop the clock, cancel the search debounce, invalidate any
+               in-flight account load, close the panels, drop the api object
+```
+
+The load invalidation is the subtle one: without it, a response that arrives
+after the user has left paints an account into a DOM they are no longer looking
+at, and they come back to the wrong account on screen.
+
+`tests/check-app.cjs` runs five focus/blur cycles and asserts the number of live
+timers does not change.
+
+### Why there is no React or Tailwind
+
+Worth stating plainly, because a dark high-density panel is exactly the kind of
+thing you would normally reach for a framework to build.
+
+Every selector in `addin.css` is scoped under `#c360-app` and every id and class
+is prefixed `c360-` — because unprefixed names leak into MyGeotab. A utility
+framework's global preflight would reset MyGeotab's own interface, not just this
+page, and the fix for that is to scope the framework, at which point it is doing
+less than the tokenised CSS it replaced.
 
 The add-in also ships as static files with no build step, matching the other
 add-ins in this org. Adding a bundler would change how it is deployed; adding
-React and Tailwind from a CDN would add two runtime network dependencies to an
-internal tool that currently has none.
+React and Tailwind from a CDN would add runtime network dependencies to a page
+that deliberately has none.
 
-So the component model here is plain functions that return HTML strings, one
-module per screen area, composed the same way components are. `js/ui/parts.js`
-holds the shared primitives, and they encode rules rather than just markup —
-`parts.plevel()` **cannot** render a priority dot without its level text beside
-it, and `parts.figure()` cannot render a missing value as a zero. That is the
-property a design system is actually for, and it does not require a framework.
+So the component model is plain functions returning HTML strings, one module per
+screen area. `js/ui/parts.js` holds the shared primitives, and they encode rules
+rather than just markup — `parts.plevel()` **cannot** render a priority dot
+without its level text beside it, and `parts.figure()` cannot render a missing
+value as a zero. That is what a design system is actually for, and it does not
+require a framework.
+
+### The containment rules are tested
+
+All of the above is one plausible-looking line away from being undone, and none
+of it throws. So `tests/check-wiring.cjs` asserts it:
+
+```text
+addin.css uses position: fixed (1x) — positions against the browser window,
+                                      so it lands on MyGeotab's chrome
+addin.css uses 100vh (1x)           — sizes to the browser window, not to the
+                                      container MyGeotab gave us
+```
+
+It also fails if the UI starts rendering a navigation rail or a product
+wordmark, if `index.html` loads a third-party stylesheet, if `blur()` stops
+calling `app.suspend()`, or if an interval is set and never cleared.
+
+---
+
+## Installing it
+
+MyGeotab → **Administration → System… → System Settings → Add-Ins → New Add-In**,
+then paste the contents of `config.json`. The add-in appears under Activity as
+**Customer 360**.
+
+`config.json` points `url` at the hosted build. To run it against a local copy,
+serve the folder and change that URL — everything else is static.
 
 ---
 
@@ -244,13 +320,14 @@ js/orchestrator.js                parallel fan-out + per-source status
 js/ui/components.js               HTML building blocks (original dashboard)
 js/ui/parts.js                    command-center primitives: priority readout,
                                   figure tile, factor bar, sparkline
-js/ui/shell.js                    nav rail, command header, status strip
+js/ui/shell.js                    the add-in toolbar: view tabs, freshness
+                                  readout, search, status strip
 js/ui/render.js                   one function per dashboard section
 js/ui/portfolio.js                the three-panel Command Center, queue tabs,
                                   matrix, signal feed, account list
 js/ui/accountWorkspace.js         the full-screen account workspace
-js/ui/brief.js                    the brief modal
-js/ui/portfolioAi.js              the Portfolio AI drawer
+js/ui/brief.js                    the inline brief panel
+js/ui/portfolioAi.js              the Portfolio AI column
 js/ui/scorecard.js                account scorecard + explainability drawers
 js/ui/approval.js                 draft review, and why it cannot send
 js/ui/feedback.js                 the four feedback controls + aggregate
@@ -263,9 +340,10 @@ docs/phase-1-audit.md             data audit + the architectural decisions taken
 tests/run-tests.cjs               logic + rendering (730 checks, loads the two below)
 tests/scorecard-tests.cjs         Phases 1-9 + the command-center engines
 tests/scenario-tests.cjs          17 end-to-end scenarios
-tests/check-app.cjs               every screen, driven through the real actions
-                                  (123 checks)
-tests/check-wiring.cjs            script/id/load-order consistency (174 checks)
+tests/check-app.cjs               every view + the MyGeotab lifecycle, driven
+                                  through the real actions (140 checks)
+tests/check-wiring.cjs            script/id/load-order consistency, plus the
+                                  add-in containment rules (187 checks)
 tests/fixtures/                   26 MOCK accounts, 17 scenarios, 8 AI responses
 tests/fixtures/generate.cjs       regenerates the account + AI fixtures
 ```
@@ -389,11 +467,15 @@ The four in bold are the ones worth re-running first after any change.
 
 | Screen | What it is for |
 | ------ | -------------- |
-| **Command Center** | The landing screen. Three panels: priority queue, active account, intelligence. Plus the action-queue tabs, the portfolio matrix and the signal feed. |
-| **Accounts** | The same rows as a filterable, sortable table. Filters combine AND across groups, OR within a group, and round-trip through the URL. |
+| **Command** | The landing view. Three panels: priority queue, active account, intelligence. Plus the action-queue tabs, the portfolio matrix and the signal feed. |
+| **Accounts** | The same rows as a filterable, sortable table. Filters combine AND across groups, OR within a group. |
 | **Signals** | The signal feed and the matrix at full width. |
-| **Intelligence** | One account's workspace: figures, next best action, signals vs activity, health history, and the full explainability drawers beneath. |
-| **Settings** | The scoring configuration, **read-only** — every value there is a judgement call that belongs in a reviewed change to `scorecardConfig.js`, not a control nudged at 8am. |
+| **Account** | One account's workspace: figures, next best action, signals vs activity, health history, and the full explainability drawers beneath. Disabled until an account is selected. |
+| **Config** | The scoring configuration, **read-only** — every value there is a judgement call that belongs in a reviewed change to `scorecardConfig.js`, not a control nudged at 8am. |
+
+They are a segmented control in the toolbar, not an icon rail: these five are
+tabs *within* one page, and claiming they are application-level destinations is
+MyGeotab's job rather than the add-in's.
 
 ### Generate Brief
 
@@ -408,9 +490,9 @@ that only asserts pretends the picture is complete.
 
 ### Portfolio AI
 
-A right-side drawer, never a takeover, answering from
+A second grid column, never a takeover, answering from
 `js/scorecard/portfolioQuery.js`: an intent matcher over the same rows the
-Command Center is rendering. Every answer names real accounts with their real
+Command view is rendering. Every answer names real accounts with their real
 scores, every named account is a button, and every answer shows **the query that
 produced it**.
 

@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "border-left: 2px solid var(--c360-accent)",
+        "createdAt": "2026-08-24T18:01:25.666Z",
+        "reason": "documented design system: addin.css header L29-32 and commit 18fd212 specify a 2px left border plus a 4-6% wash as the state carrier, never a filled card, always paired with the state in words"
+      },
+      {
+        "rule": "side-tab",
+        "value": "border-left: 2px solid var(--c360-border-strong)",
+        "createdAt": "2026-08-24T18:01:26.113Z",
+        "reason": "neutral grey quote bar on blockquote-like elements (border-radius 0 3px 3px 0), not an accent tab; part of the documented 2px-left-border system in addin.css header L29-32"
+      },
+      {
+        "rule": "side-tab",
+        "value": "border-left: 2px solid var(--c360-ai)",
+        "createdAt": "2026-08-24T18:01:26.822Z",
+        "reason": "the single violet model-derived marker defined in addin.css L82-86, used for nothing else so the AI provenance marker is unambiguous; documented system, commit 18fd212"
+      }
+    ]
+  }
+}

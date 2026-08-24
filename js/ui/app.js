@@ -1,11 +1,31 @@
 /**
- * Customer 360 — application shell
- * ================================
- * State, events, and which screen is showing.
+ * Customer 360 — add-in shell
+ * ===========================
+ * State, events, and which view is showing.
  *
- * FIVE SCREENS, one workspace column:
+ * THIS IS A MYGEOTAB ADD-IN, NOT A STANDALONE APPLICATION. MyGeotab injects
+ * this page into its own document and drives a lifecycle over it, which
+ * constrains three things that a web app would take for granted:
  *
- *   command       the three-panel Command Center — the landing screen
+ *   IT DOES NOT OWN THE VIEWPORT. No screen is sized to `100vh` and no overlay
+ *   is `position: fixed`, because both escape the add-in's box and land on top
+ *   of MyGeotab's own interface. The brief renders inline at the top of the
+ *   workspace and the AI panel is a grid column, so neither needs to.
+ *
+ *   IT DOES NOT OWN THE URL. MyGeotab's router owns `window.location` (it is
+ *   hash-based: `#ActivityLink,...`). Writing filter state into it fights that
+ *   router, so `syncUrl()` is a no-op while embedded and view state is held
+ *   here instead. Standalone — opened directly, or on Vercel — the URL still
+ *   round-trips, because there nothing else is using it.
+ *
+ *   IT MUST TEAR DOWN. `blur()` fires every time the user navigates away and
+ *   `focus()` every time they come back. Anything left running leaks once per
+ *   visit, which is why `suspend()` exists and why the clock interval is the
+ *   only timer in the file.
+ *
+ * FIVE VIEWS, one workspace column:
+ *
+ *   command       the three-panel Command view — the landing view
  *   accounts      the filterable account list + the queue tabs that drive it
  *   signals       the portfolio signal feed and the matrix, at full width
  *   intelligence  one account's detail workspace, plus the legacy Customer 360
@@ -25,7 +45,7 @@
  *
  * State lives in one object. Every action mutates it and calls render(); there
  * is no partial DOM patching except where re-rendering would lose the user's
- * place (the feedback controls, the draft validation message).
+ * place (the feedback controls, the draft validation message, the clock).
  */
 
 "use strict";
@@ -41,6 +61,13 @@ C360.app = (function () {
     var CLOCK_MS = 1000;
 
     var state = {
+        /**
+         * True when MyGeotab drove `initialize()`. Governs whether the add-in
+         * may touch the URL, and nothing else — every other behaviour is the
+         * same embedded or not.
+         */
+        embedded: false,
+
         /** command | accounts | signals | intelligence | settings */
         screen: "command",
 
@@ -122,7 +149,17 @@ C360.app = (function () {
     // URL state
     // -----------------------------------------------------------------
 
+    /**
+     * Reflect view state into the query string — STANDALONE ONLY.
+     *
+     * Inside MyGeotab the URL belongs to MyGeotab's hash router, and writing
+     * `?queue=save&sort=health` over it would either be stamped on by the next
+     * navigation or corrupt the route. So while embedded this does nothing and
+     * the state lives here; a shareable URL is a standalone nicety, not a
+     * feature worth breaking the host's routing for.
+     */
     function syncUrl() {
+        if (state.embedded) { return; }
         if (!window.history || typeof window.history.replaceState !== "function") {
             return;
         }
@@ -654,13 +691,12 @@ C360.app = (function () {
             + 'on the matching database.';
     }
 
-    /** The chrome, which is present on every screen. */
+    /** The chrome, which is present on every view. */
     function renderChrome() {
-        el.rail.innerHTML = C360.shell.rail(state);
-        el.head.innerHTML = C360.shell.header(state);
+        el.head.innerHTML = C360.shell.toolbar(state);
 
-        // The search element is recreated with the header, so re-cache it and
-        // re-bind. Cheap, and it keeps the header a pure string builder.
+        // The search element is recreated with the toolbar, so re-cache it and
+        // re-bind. Cheap, and it keeps the toolbar a pure string builder.
         el.search = document.getElementById("c360-search");
         el.searchResults = document.getElementById("c360-search-results");
         if (el.search && !el.search._c360bound) {
@@ -676,21 +712,36 @@ C360.app = (function () {
         el.strip.hidden = !strip;
     }
 
-    function renderOverlays() {
+    /**
+     * The brief and the AI panel.
+     *
+     * Neither is an overlay. The brief renders INLINE at the top of the
+     * workspace — where the user is already looking, since they just clicked
+     * Generate Brief — and the AI panel is a grid column that the workspace
+     * narrows to make room for.
+     *
+     * A `position: fixed` modal and a fixed drawer both worked when this was a
+     * full-page app and both were wrong here: fixed positioning is relative to
+     * the browser viewport, so inside an injected add-in they cover MyGeotab's
+     * header and navigation rather than the add-in's own area.
+     */
+    function renderPanels() {
         if (state.brief) {
-            el.modal.hidden = false;
-            el.modal.innerHTML = C360.briefUi.render(state.brief);
+            el.brief.hidden = false;
+            el.brief.innerHTML = C360.briefUi.render(state.brief);
         } else {
-            el.modal.hidden = true;
-            el.modal.innerHTML = "";
+            el.brief.hidden = true;
+            el.brief.innerHTML = "";
         }
 
         if (state.aiOpen) {
-            el.drawer.hidden = false;
-            el.drawer.innerHTML = C360.portfolioAiUi.render(state, state.portfolioView);
+            el.aside.hidden = false;
+            el.aside.innerHTML = C360.portfolioAiUi.render(state, state.portfolioView);
+            el.body.classList.add("is-aside");
         } else {
-            el.drawer.hidden = true;
-            el.drawer.innerHTML = "";
+            el.aside.hidden = true;
+            el.aside.innerHTML = "";
+            el.body.classList.remove("is-aside");
         }
     }
 
@@ -708,7 +759,7 @@ C360.app = (function () {
     function render() {
         renderChrome();
         renderMockBanner();
-        renderOverlays();
+        renderPanels();
 
         if (state.screen === "intelligence") {
             renderAccountScreen();
@@ -989,15 +1040,12 @@ C360.app = (function () {
             return;
         }
 
-        if (target.closest("#c360-modal-close")) { closeBrief(); return; }
+        if (target.closest("#c360-brief-close")) { closeBrief(); return; }
 
         if (target.closest("#c360-brief-copy")) {
             copyBrief();
             return;
         }
-
-        // A click on the overlay backdrop, but not the modal itself, closes it.
-        if (target === el.modal) { closeBrief(); return; }
 
         // ---- escalate ------------------------------------------------
         var escalate = target.closest("[data-escalate-account]");
@@ -1145,6 +1193,14 @@ C360.app = (function () {
         done("The clipboard is not available in this embedding.");
     }
 
+    /**
+     * Bound to `#c360-app`, not to `document`.
+     *
+     * A document-level key handler in an injected add-in intercepts keystrokes
+     * meant for MyGeotab — Escape while a MyGeotab dialog is open, for one.
+     * Scoping it to our own subtree means these shortcuts work when the user is
+     * in the add-in and stay out of the way when they are not.
+     */
     function onKeydown(event) {
         if (event.key === "Escape") {
             if (state.brief) { closeBrief(); return; }
@@ -1173,18 +1229,67 @@ C360.app = (function () {
      * The one place in the interface that reads the wall clock.
      *
      * It patches the clock node directly rather than re-rendering: a full
-     * re-render every second would rebuild the whole workspace and lose focus,
-     * scroll position and any open drawer once per tick.
+     * re-render every second would rebuild the workspace and lose focus, scroll
+     * position and any open panel once per tick.
+     *
+     * The interval runs only while the add-in has focus. MyGeotab calls
+     * `blur()` on every navigation away and `focus()` on every return, so an
+     * interval that survived a blur would be a second timer on the next visit,
+     * a third on the one after, and a page that gets slower the longer somebody
+     * uses MyGeotab.
      */
     function startClock() {
-        function tick() {
-            state.clock = C360.shell.clockText(new Date());
-            var node = document.getElementById("c360-clock");
-            if (node) { node.textContent = state.clock; }
+        stopClock();
+        tickClock();
+        clockTimer = setInterval(tickClock, CLOCK_MS);
+    }
+
+    function tickClock() {
+        state.clock = C360.shell.clockText(new Date());
+        var node = document.getElementById("c360-clock");
+        if (node) { node.textContent = state.clock; }
+    }
+
+    function stopClock() {
+        if (clockTimer) {
+            clearInterval(clockTimer);
+            clockTimer = null;
         }
-        tick();
-        if (clockTimer) { clearInterval(clockTimer); }
-        clockTimer = setInterval(tick, CLOCK_MS);
+    }
+
+    // -----------------------------------------------------------------
+    // MyGeotab lifecycle
+    // -----------------------------------------------------------------
+
+    /**
+     * Called from `blur()`. The user has navigated away inside MyGeotab; the
+     * DOM is still there but nothing should be running.
+     *
+     * Panels are closed as well as the timer stopped: coming back to a
+     * half-open AI drawer from three navigations ago is disorienting, and the
+     * portfolio behind it may have been refreshed since.
+     */
+    function suspend() {
+        stopClock();
+
+        if (searchTimer) {
+            clearTimeout(searchTimer);
+            searchTimer = null;
+        }
+
+        // Invalidate any in-flight account load, so a response that arrives
+        // after the user has left does not paint over the next view.
+        loadToken++;
+
+        state.aiOpen = false;
+        state.brief = null;
+        state.searchOpen = false;
+    }
+
+    /** Called from `focus()`. Restart what `suspend()` stopped. */
+    function resume() {
+        startClock();
+        render();
     }
 
     // -----------------------------------------------------------------
@@ -1193,10 +1298,11 @@ C360.app = (function () {
 
     function cacheElements() {
         el.root = document.getElementById("c360-app");
-        el.rail = document.getElementById("c360-rail");
         el.head = document.getElementById("c360-cmdhead");
         el.strip = document.getElementById("c360-strip");
         el.mockBanner = document.getElementById("c360-mock-banner");
+        el.body = document.getElementById("c360-body");
+        el.brief = document.getElementById("c360-brief");
         el.portfolio = document.getElementById("c360-portfolio");
         el.header = document.getElementById("c360-account-header");
         el.toolbar = document.getElementById("c360-toolbar");
@@ -1204,43 +1310,73 @@ C360.app = (function () {
         el.scorecard = document.getElementById("c360-scorecard-block");
         el.content = document.getElementById("c360-content");
         el.error = document.getElementById("c360-error");
-        el.modal = document.getElementById("c360-modal");
-        el.drawer = document.getElementById("c360-aidrawer");
+        el.aside = document.getElementById("c360-aidrawer");
     }
 
     var SCREENS = ["command", "accounts", "signals", "intelligence", "settings"];
 
+    /**
+     * Boot, or re-enter.
+     *
+     * Safe to call repeatedly: MyGeotab calls `focus()` on every navigation
+     * back to the add-in, and `focus()` calls this. Only the first call wires
+     * the DOM and fetches; the rest resume.
+     *
+     * @param {object} options
+     *   embedded   true when MyGeotab drove initialize(). Governs URL writes.
+     *   accountId  a deep-linked account, from MyGeotab state or a query param.
+     */
     function start(options) {
         var opts = options || {};
+
+        if (opts.embedded) { state.embedded = true; }
 
         if (!el.root) {
             cacheElements();
             el.root.setAttribute("data-started", "true");
             state.dateFilterId = C360.config.defaultDateFilterId;
 
-            var restored = C360.portfolio.fromQuery(
-                String(window.location.search || "") + "&"
-                + String(window.location.hash || "").replace(/^#/, ""));
-            state.filters = restored.filters;
-            state.sort = restored.sort;
-            if (SCREENS.indexOf(restored.view) !== -1) { state.screen = restored.view; }
-            if (restored.accountId) { state.selectedAccountId = restored.accountId; }
+            /*
+             * View state comes from the URL only when standalone. Embedded, the
+             * URL is MyGeotab's; the deep-linked account arrives through
+             * `opts.accountId`, which addin.js reads out of the MyGeotab state
+             * object.
+             */
+            if (!state.embedded) {
+                var restored = C360.portfolio.fromQuery(
+                    String(window.location.search || "") + "&"
+                    + String(window.location.hash || "").replace(/^#/, ""));
+                state.filters = restored.filters;
+                state.sort = restored.sort;
+                if (SCREENS.indexOf(restored.view) !== -1) {
+                    state.screen = restored.view;
+                }
+                if (restored.accountId) {
+                    state.selectedAccountId = restored.accountId;
+                    if (restored.view === "intelligence" && !opts.accountId) {
+                        state.pendingAccountId = restored.accountId;
+                    }
+                }
+            }
 
             el.root.addEventListener("click", onClick);
             el.root.addEventListener("change", onChange);
-            document.addEventListener("keydown", onKeydown);
+            el.root.addEventListener("keydown", onKeydown);
 
             startClock();
             render();
 
-            // The Command Center is the landing screen: "who should I care
-            // about today" is a portfolio question.
+            // The Command Center is the landing view: "who should I care about
+            // today" is a portfolio question.
             loadPortfolio({});
 
-            if (restored.accountId && restored.view === "intelligence"
-                && !opts.accountId) {
-                openAccount(restored.accountId);
+            if (state.pendingAccountId && !opts.accountId) {
+                openAccount(state.pendingAccountId);
+                state.pendingAccountId = null;
             }
+        } else {
+            // A return visit. Restart what blur() stopped.
+            resume();
         }
 
         if (opts.accountId && opts.accountId !== state.accountId) {
@@ -1266,6 +1402,10 @@ C360.app = (function () {
         askAi: askAi,
         closeAi: closeAi,
         loadPortfolio: loadPortfolio,
+
+        /** MyGeotab lifecycle. Called from js/addin.js, nowhere else. */
+        suspend: suspend,
+        resume: resume,
 
         /** Kept for MyGeotab deep links and older callers. */
         loadAccount: loadAccount,

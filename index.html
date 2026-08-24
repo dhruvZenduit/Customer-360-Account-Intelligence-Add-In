@@ -3,121 +3,130 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Customer 360 — Command Center</title>
-
-    <link rel="stylesheet" href="addin.css" />
+    <title>Customer 360</title>
 
     <!--
-        Inter for the UI, JetBrains Mono for every number.
+        The only stylesheet, and no webfonts.
 
-        Loaded after addin.css, which already declares a full fallback stack for
-        both, so the interface is correct with no webfont at all — a useful
-        property for an add-in that may be opened on a locked-down machine. No
-        internal data crosses this boundary; it is a font request.
+        An add-in runs inside a customer's MyGeotab. A third-party font request
+        from in there is a request the customer did not ask for, subject to
+        their CSP, and a dependency the page does not need — so the type stack
+        in addin.css prefers Inter and JetBrains Mono if the machine already has
+        them and falls back to good system faces if not.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="addin.css" />
 </head>
 <body>
     <!--
-        Root container.
+        ============================================================
+        MYGEOTAB ADD-IN ROOT
+        ============================================================
+        MyGeotab injects this page into its own document, which drives almost
+        every structural decision below.
 
-        Every id and class is prefixed "c360-" because MyGeotab injects this
-        page into its own DOM — unprefixed names would collide with, or leak
-        styles into, MyGeotab itself. Same convention as the other add-ins
-        in this org ("dsc-", "sec-").
+        Every id and class is prefixed "c360-" because unprefixed names would
+        collide with, or leak styles into, MyGeotab itself. Same convention as
+        the other add-ins in this org ("dsc-", "sec-"). It is also why there is
+        no CSS framework here: a utility framework's global preflight would
+        reset MyGeotab's own interface, not just this page.
 
-        That constraint is also why there is no CSS framework here: a utility
-        framework's global preflight would reset MyGeotab's own interface, not
-        just this page.
+        There is NO navigation rail and NO product header. MyGeotab already
+        supplies both, plus the database name, the signed-in user and this
+        add-in's own menu entry. A second left rail three pixels from
+        MyGeotab's is the clearest possible sign of a web app that got embedded
+        by accident.
+
+        Nothing here is sized to the viewport and nothing is position:fixed.
+        The add-in sizes to its content inside MyGeotab's page; a fixed overlay
+        would be positioned against the browser window and land on top of
+        MyGeotab's chrome instead of the add-in's own area.
+        ============================================================
     -->
-    <div id="c360-app" class="c360-appshell">
-
-        <!-- ============================================================
-             Left navigation rail.
-
-             Collapsed to an icon strip, expanding on hover or focus-within.
-             Rendered by js/ui/shell.js so the active screen and the
-             account-dependent items stay in sync with app state.
-             ============================================================ -->
-        <nav id="c360-rail" class="c360-rail" aria-label="Primary"></nav>
-
-        <div class="c360-shell">
-
-            <!-- ========================================================
-                 Command header: product line, screen title, live clock,
-                 system status, search, Portfolio AI, Refresh.
-
-                 Deliberately compact. A command center that spends 200px
-                 on its own name is one you scroll past every morning.
-                 ======================================================== -->
-            <header id="c360-cmdhead" class="c360-cmdhead"></header>
-
-            <!-- Portfolio status strip: five figures, monospace, one row. -->
-            <div id="c360-strip" class="c360-strip" hidden></div>
-
-            <!--
-                Mock-data banner. Shown whenever the active data source is the
-                bundled sample set, on every screen, so invented records can
-                never be mistaken for the real account picture.
-            -->
-            <div id="c360-mock-banner" class="c360-mock-banner" role="note" hidden></div>
-
-            <!--
-                The main workspace. Holds whichever screen is active: the
-                three-panel Command Center, the account list, the signal feed,
-                the account detail workspace, or settings.
-            -->
-            <div id="c360-portfolio" class="c360-portfolio"></div>
-
-            <!-- Page-level error state -->
-            <div id="c360-error" class="c360-error" role="alert" hidden></div>
-
-            <!-- ========================================================
-                 The rest of this column is the ORIGINAL account view,
-                 unchanged in behaviour and still rendered by the same
-                 code. On the Intelligence screen it appears beneath the
-                 account workspace.
-                 ======================================================== -->
-
-            <!-- Account header: name, industry, key facts -->
-            <div id="c360-account-header" class="c360-account-header" hidden></div>
-
-            <!-- Per-source load status: internal / website / external -->
-            <div id="c360-source-status" class="c360-source-status" hidden></div>
-
-            <!-- Filters and the records-as-of stamp -->
-            <div id="c360-toolbar" class="c360-toolbar" hidden></div>
-
-            <!--
-                The Phase 7 scorecard block: health arithmetic, priority
-                explanation, confidence per source, evidence drawers, drafts
-                and feedback controls. Rendered inside the account workspace.
-            -->
-            <div id="c360-scorecard-block" class="c360-scorecard-block" hidden></div>
-
-            <!-- Existing Customer 360 sections render into here -->
-            <main id="c360-content" class="c360-content"></main>
-
-            <footer class="c360-footer">
-                <p>Internal use only. Intelligence on this page is derived from the records
-                   listed in the Sources section; interpretations are labelled with a
-                   confidence level. Health and priority are calculated separately and are
-                   allowed to disagree.</p>
-            </footer>
-        </div>
+    <div id="c360-app">
 
         <!--
-            Portfolio AI drawer. A right-side panel, never a takeover — the
-            dashboard stays visible and clickable behind it, because the
-            answers are about what is on it.
+            The add-in toolbar: view tabs, data-freshness readout, search,
+            Portfolio AI, Refresh. One compact row — vertical space inside an
+            embedded panel is the scarcest thing there is.
         -->
-        <aside id="c360-aidrawer" hidden></aside>
+        <div id="c360-cmdhead" class="c360-bar"></div>
 
-        <!-- Brief modal overlay -->
-        <div id="c360-modal" class="c360-overlay" hidden></div>
+        <!-- Portfolio status strip: five figures, monospace, one row. -->
+        <div id="c360-strip" class="c360-strip" hidden></div>
+
+        <!--
+            Mock-data banner. Shown on every view whenever the active data
+            source is the bundled sample set, so invented records can never be
+            mistaken for the real account picture.
+        -->
+        <div id="c360-mock-banner" class="c360-mock-banner" role="note" hidden></div>
+
+        <!--
+            Body grid. One column normally; two when the Portfolio AI panel is
+            open, which narrows the workspace rather than covering it.
+        -->
+        <div id="c360-body" class="c360-body">
+
+            <div class="c360-main">
+
+                <!--
+                    The account brief. Renders INLINE at the top of the
+                    workspace rather than as an overlay — where the user is
+                    already looking, since they just clicked Generate Brief.
+                -->
+                <div id="c360-brief" hidden></div>
+
+                <!--
+                    The workspace. Holds whichever view is active: the
+                    three-panel Command Center, the account list, the signal
+                    feed, the account detail workspace, or the config readout.
+                -->
+                <div id="c360-portfolio" class="c360-portfolio"></div>
+
+                <!-- View-level error state -->
+                <div id="c360-error" class="c360-error" role="alert" hidden></div>
+
+                <!-- ================================================
+                     The rest of this column is the ORIGINAL account
+                     view, unchanged in behaviour and still rendered by
+                     the same code. On the Account view it appears
+                     beneath the account workspace.
+                     ================================================ -->
+
+                <!-- Account header: name, industry, key facts -->
+                <div id="c360-account-header" class="c360-account-header" hidden></div>
+
+                <!-- Per-source load status: internal / website / external -->
+                <div id="c360-source-status" class="c360-source-status" hidden></div>
+
+                <!-- Period and source filters for the sections below -->
+                <div id="c360-toolbar" class="c360-toolbar" hidden></div>
+
+                <!--
+                    The scorecard block: health arithmetic, priority
+                    explanation, confidence per source, evidence drawers,
+                    drafts and feedback controls.
+                -->
+                <div id="c360-scorecard-block" class="c360-scorecard-block" hidden></div>
+
+                <!-- Existing Customer 360 sections render into here -->
+                <main id="c360-content" class="c360-content"></main>
+
+                <footer class="c360-footer">
+                    <p>Internal use only. Intelligence on this page is derived from the
+                       records listed in the Sources section; interpretations are labelled
+                       with a confidence level. Health and priority are calculated
+                       separately and are allowed to disagree.</p>
+                </footer>
+            </div>
+
+            <!--
+                Portfolio AI. A second grid column, not a drawer over the page:
+                the workspace narrows and stays visible, because the answers are
+                about what is on it.
+            -->
+            <aside id="c360-aidrawer" hidden></aside>
+        </div>
     </div>
 
     <!--
