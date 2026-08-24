@@ -1,0 +1,133 @@
+{
+  "id": "cancellation",
+  "name": "Explicit cancellation request",
+  "category": "cancelled",
+  "proves": "A P0 set by override rather than by score, with the matched excerpt kept as evidence so a false positive is visible.",
+  "data": {
+    "account": {
+      "id": "sc-cancel",
+      "name": "Pinehurst Delivery Group",
+      "domain": "sc-cancel.example",
+      "status": "Active",
+      "customerSince": "2019-05-01",
+      "assetCount": 180,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "fleet-heavy",
+      "products": [
+        "Telematics Core",
+        "Driver Safety Cameras",
+        "Compliance / HOS",
+        "Routing & Dispatch",
+        "Asset Tracking"
+      ],
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [],
+    "billingIssues": [],
+    "technicalIssues": [],
+    "reviews": [
+      {
+        "id": "s-r1",
+        "date": "-30d",
+        "type": "Quarterly Business Review",
+        "mock": true
+      }
+    ],
+    "contacts": [
+      {
+        "id": "s-c1",
+        "name": "Dana Reyes",
+        "title": "Fleet Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c2",
+        "name": "Ana Lopez",
+        "title": "Director of Operations",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c3",
+        "name": "Ken Obi",
+        "title": "Director of Safety",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c4",
+        "name": "Rae Kim",
+        "title": "Procurement Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      }
+    ],
+    "external": [],
+    "deviceHealth": {
+      "available": true,
+      "deviceCount": 180,
+      "notCommunicating": 2,
+      "cameraAvailabilityPct": 98,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "portalUsage": {
+      "available": true,
+      "activeUsers": 62,
+      "previousActiveUsers": 60,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "contract": {
+      "id": "s-k1",
+      "startDate": "2019-05-01",
+      "renewalDate": "+300d",
+      "annualValue": 90000,
+      "mock": true
+    },
+    "communications": [
+      {
+        "id": "sc-m1",
+        "date": "-3d",
+        "direction": "inbound",
+        "subject": "Ending our contract",
+        "body": "After the board review we have decided to cancel our contract at the end of the current term.",
+        "author": "Dana Reyes",
+        "mock": true
+      }
+    ],
+    "commitments": [],
+    "outcomes": {
+      "available": true,
+      "trainingCompleted": true,
+      "trainingCompletedDate": "-40d",
+      "recommendationsImplemented": 2,
+      "improvements": [
+        {
+          "label": "Idling reduced",
+          "change": "-12%",
+          "date": "-30d"
+        }
+      ],
+      "mock": true
+    }
+  },
+  "expect": {
+    "level": "P0",
+    "queue": "save",
+    "overridesFired": [
+      "explicitCancellationRequest"
+    ]
+  }
+}

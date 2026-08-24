@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "addin.css"
+        ],
+        "createdAt": "2026-08-24T18:59:18.087Z",
+        "reason": "documented design system, not drift: addin.css header L29-32 and commit 18fd212 specify state as a 2px left border plus a 4-6% wash, never a filled card, and ALWAYS paired with the state in words so colour is a second cue. Scoped to addin.css only. Supersedes three exact-value ignores that could never match, since side-tab exposes no extractable value."
+      }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "acc-051",
+  "name": "Rockport Marine Logistics",
+  "category": "expansion",
+  "mock": true,
+  "proves": "Expansion via rising orders and a public port contract. GROW.",
+  "account": {
+    "industry": "Marine Freight",
+    "status": "Active",
+    "customerSince": "2021-01-19",
+    "assetCount": 71,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 2,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 4,
+    "external": 1,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "acc-011",
+  "name": "Blue Line Distribution",
+  "category": "healthy",
+  "mock": true,
+  "proves": "Healthy mid-size account with measured outcomes and full coverage. Also lands in no queue.",
+  "account": {
+    "industry": "Food Distribution",
+    "status": "Active",
+    "customerSince": "2017-02-02",
+    "assetCount": 214,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 4,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": true,
+    "commitments": 0
+  }
+}

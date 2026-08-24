@@ -1,0 +1,37 @@
+{
+  "id": "acc-071",
+  "name": "Amberline Coach Hire",
+  "category": "billing",
+  "mock": true,
+  "proves": "Billing problems plus an angry customer email about duplicate charges. Proves billing and sentiment stack.",
+  "account": {
+    "industry": "Coach Hire",
+    "status": "Active",
+    "customerSince": "2021-04-12",
+    "assetCount": 38,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 1,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 1,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

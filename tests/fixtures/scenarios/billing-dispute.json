@@ -1,0 +1,141 @@
+{
+  "id": "billing-dispute",
+  "name": "Unresolved billing dispute with a past-due balance",
+  "category": "billing",
+  "proves": "FIX from the billing rule, and a commercial category penalised for the past-due balance without touching product health.",
+  "data": {
+    "account": {
+      "id": "sc-billing",
+      "name": "Kestrel Field Services",
+      "domain": "sc-billing.example",
+      "status": "Active",
+      "customerSince": "2019-05-01",
+      "assetCount": 180,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "fleet-heavy",
+      "products": [
+        "Telematics Core",
+        "Driver Safety Cameras",
+        "Compliance / HOS",
+        "Routing & Dispatch",
+        "Asset Tracking"
+      ],
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [],
+    "billingIssues": [
+      {
+        "id": "sc-b1",
+        "subject": "Disputed per-unit rate on annual invoice",
+        "date": "-40d",
+        "status": "Open",
+        "customerImpact": "Customer has withheld payment pending review.",
+        "impactEvidence": "Stated by customer on the dispute thread.",
+        "lastActivity": "-6d",
+        "mock": true
+      }
+    ],
+    "technicalIssues": [],
+    "reviews": [
+      {
+        "id": "s-r1",
+        "date": "-30d",
+        "type": "Quarterly Business Review",
+        "mock": true
+      }
+    ],
+    "contacts": [
+      {
+        "id": "s-c1",
+        "name": "Dana Reyes",
+        "title": "Fleet Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c2",
+        "name": "Ana Lopez",
+        "title": "Director of Operations",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c3",
+        "name": "Ken Obi",
+        "title": "Director of Safety",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c4",
+        "name": "Rae Kim",
+        "title": "Procurement Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      }
+    ],
+    "external": [],
+    "deviceHealth": {
+      "available": true,
+      "deviceCount": 180,
+      "notCommunicating": 2,
+      "cameraAvailabilityPct": 98,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "portalUsage": {
+      "available": true,
+      "activeUsers": 62,
+      "previousActiveUsers": 60,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "contract": {
+      "id": "sc-k4",
+      "startDate": "2019-06-23",
+      "renewalDate": "+205d",
+      "annualValue": 118000,
+      "pastDueAmount": 28600,
+      "pastDueSince": "-46d",
+      "mock": true
+    },
+    "communications": [
+      {
+        "id": "s-m1",
+        "date": "-9d",
+        "subject": "Thanks",
+        "body": "All good on our side this month.",
+        "author": "Dana Reyes",
+        "mock": true
+      }
+    ],
+    "commitments": [],
+    "outcomes": {
+      "available": true,
+      "trainingCompleted": true,
+      "trainingCompletedDate": "-40d",
+      "recommendationsImplemented": 2,
+      "improvements": [
+        {
+          "label": "Idling reduced",
+          "change": "-12%",
+          "date": "-30d"
+        }
+      ],
+      "mock": true
+    }
+  },
+  "expect": {
+    "queue": "fix"
+  }
+}

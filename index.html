@@ -3,91 +3,143 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Customer 360 — Account Intelligence</title>
+    <title>Customer 360</title>
 
+    <!--
+        The only stylesheet, and no webfonts.
+
+        An add-in runs inside a customer's MyGeotab. A third-party font request
+        from in there is a request the customer did not ask for, subject to
+        their CSP, and a dependency the page does not need — so the type stack
+        in addin.css prefers Inter and JetBrains Mono if the machine already has
+        them and falls back to good system faces if not.
+    -->
     <link rel="stylesheet" href="addin.css" />
 </head>
 <body>
     <!--
-        Root container.
+        ============================================================
+        MYGEOTAB ADD-IN ROOT
+        ============================================================
+        MyGeotab injects this page into its own document, which drives almost
+        every structural decision below.
 
-        Every id and class is prefixed "c360-" because MyGeotab injects this
-        page into its own DOM — unprefixed names would collide with, or leak
-        styles into, MyGeotab itself. Same convention as the other add-ins
-        in this org ("dsc-", "sec-").
+        Every id and class is prefixed "c360-" because unprefixed names would
+        collide with, or leak styles into, MyGeotab itself. Same convention as
+        the other add-ins in this org ("dsc-", "sec-"). It is also why there is
+        no CSS framework here: a utility framework's global preflight would
+        reset MyGeotab's own interface, not just this page.
+
+        There is NO navigation rail and NO product header. MyGeotab already
+        supplies both, plus the database name, the signed-in user and this
+        add-in's own menu entry. A second left rail three pixels from
+        MyGeotab's is the clearest possible sign of a web app that got embedded
+        by accident.
+
+        Nothing here is sized to the viewport and nothing is position:fixed.
+        The add-in sizes to its content inside MyGeotab's page; a fixed overlay
+        would be positioned against the browser window and land on top of
+        MyGeotab's chrome instead of the add-in's own area.
+        ============================================================
     -->
     <div id="c360-app">
 
-        <!-- ============================================================
-             Top bar: product name + account search
-             ============================================================ -->
-        <header class="c360-topbar">
-            <div class="c360-brand">
-                <span class="c360-brand-mark" aria-hidden="true">360</span>
-                <span class="c360-brand-name">Customer 360</span>
-                <span class="c360-brand-sub">Account Intelligence</span>
-            </div>
+        <!--
+            The add-in toolbar: view tabs, data-freshness readout, search,
+            Portfolio AI, Refresh. One compact row — vertical space inside an
+            embedded panel is the scarcest thing there is.
+        -->
+        <div id="c360-cmdhead" class="c360-cmdbar"></div>
 
-            <div class="c360-search">
-                <label class="c360-visually-hidden" for="c360-search">Search customer accounts</label>
-                <input
-                    type="search"
-                    id="c360-search"
-                    class="c360-search-input"
-                    placeholder="Search customer account…"
-                    autocomplete="off"
-                    role="combobox"
-                    aria-expanded="false"
-                    aria-controls="c360-search-results"
-                    aria-autocomplete="list" />
-                <ul id="c360-search-results"
-                    class="c360-search-results"
-                    role="listbox"
-                    aria-label="Account search results"
-                    hidden></ul>
-            </div>
-        </header>
+        <!-- Portfolio status strip: five figures, monospace, one row. -->
+        <div id="c360-strip" class="c360-strip" hidden></div>
 
         <!--
-            Mock-data banner. Rendered by app.js and shown whenever the active
-            data source is the bundled sample set, so nobody can mistake
-            invented records for the real account picture.
+            Mock-data banner. Shown on every view whenever the active data
+            source is the bundled sample set, so invented records can never be
+            mistaken for the real account picture.
         -->
         <div id="c360-mock-banner" class="c360-mock-banner" role="note" hidden></div>
 
-        <!-- Account header: name, industry, key facts (spec section 6) -->
-        <div id="c360-account-header" class="c360-account-header" hidden></div>
+        <!--
+            Body grid. One column normally; two when the Portfolio AI panel is
+            open, which narrows the workspace rather than covering it.
+        -->
+        <div id="c360-body" class="c360-body">
 
-        <!-- Per-source load status: internal / website / external (section 32) -->
-        <div id="c360-source-status" class="c360-source-status" hidden></div>
+            <div class="c360-main">
 
-        <!-- Filters, last-updated stamp and Refresh Intelligence (sections 29, 34) -->
-        <div id="c360-toolbar" class="c360-toolbar" hidden></div>
+                <!--
+                    The account brief. Renders INLINE at the top of the
+                    workspace rather than as an overlay — where the user is
+                    already looking, since they just clicked Generate Brief.
+                -->
+                <div id="c360-brief" hidden></div>
 
-        <!-- First-run state: choose an account -->
-        <div id="c360-welcome" class="c360-welcome" hidden></div>
+                <!--
+                    The workspace. Holds whichever view is active: the
+                    three-panel Command Center, the account list, the signal
+                    feed, the account detail workspace, or the config readout.
+                -->
+                <div id="c360-portfolio" class="c360-portfolio"></div>
 
-        <!-- Page-level error state -->
-        <div id="c360-error" class="c360-error" role="alert" hidden></div>
+                <!-- View-level error state -->
+                <div id="c360-error" class="c360-error" role="alert" hidden></div>
 
-        <!-- All dashboard sections are rendered into here -->
-        <main id="c360-content" class="c360-content"></main>
+                <!-- ================================================
+                     The rest of this column is the ORIGINAL account
+                     view, unchanged in behaviour and still rendered by
+                     the same code. On the Account view it appears
+                     beneath the account workspace.
+                     ================================================ -->
 
-        <footer class="c360-footer">
-            <p>Internal use only. Intelligence on this page is derived from the records listed in
-               the Sources section; interpretations are labelled with a confidence level.</p>
-        </footer>
+                <!-- Account header: name, industry, key facts -->
+                <div id="c360-account-header" class="c360-account-header" hidden></div>
+
+                <!-- Per-source load status: internal / website / external -->
+                <div id="c360-source-status" class="c360-source-status" hidden></div>
+
+                <!-- Period and source filters for the sections below -->
+                <div id="c360-toolbar" class="c360-toolbar" hidden></div>
+
+                <!--
+                    The scorecard block: health arithmetic, priority
+                    explanation, confidence per source, evidence drawers,
+                    drafts and feedback controls.
+                -->
+                <div id="c360-scorecard-block" class="c360-scorecard-block" hidden></div>
+
+                <!-- Existing Customer 360 sections render into here -->
+                <main id="c360-content" class="c360-content"></main>
+
+                <footer class="c360-footer">
+                    <p>Internal use only. Intelligence on this page is derived from the
+                       records listed in the Sources section; interpretations are labelled
+                       with a confidence level. Health and priority are calculated
+                       separately and are allowed to disagree.</p>
+                </footer>
+            </div>
+
+            <!--
+                Portfolio AI. A second grid column, not a drawer over the page:
+                the workspace narrows and stays visible, because the answers are
+                about what is on it.
+            -->
+            <aside id="c360-aidrawer" hidden></aside>
+        </div>
     </div>
 
     <!--
         No build step and no dependencies, matching the other add-ins here.
         Load order is dependency order: core, then normalisation, then
-        services, then the intelligence engine, then the UI.
+        services, then the intelligence engine, then the scorecard engines,
+        then the UI.
     -->
 
     <!-- Core -->
     <script src="js/core/namespace.js"></script>
     <script src="js/core/config.js"></script>
+    <script src="js/core/scorecardConfig.js"></script>
     <script src="js/core/util.js"></script>
     <script src="js/core/cache.js"></script>
 
@@ -112,6 +164,9 @@
     <script src="js/services/webResearchService.js"></script>
     <script src="js/services/contactService.js"></script>
     <script src="js/services/geotabService.js"></script>
+    <!-- Scorecard sources: device health, portal usage, contract, commitments,
+         communications, outcomes. None is connected to a real system today. -->
+    <script src="js/services/scorecardSourceService.js"></script>
 
     <!-- Intelligence engine: facts -> signals -> risks/opportunities -> actions -->
     <script src="js/intelligence/facts.js"></script>
@@ -124,10 +179,54 @@
     <script src="js/intelligence/summary.js"></script>
     <script src="js/intelligence/intelligenceEngine.js"></script>
 
+    <!--
+        Scorecard engine: identity -> segment -> health -> priority -> queues
+        -> actions. Load order is dependency order, same rule as everything
+        above: the shared evidence and detection helpers first, then Phase 1,
+        then each phase that reads the one before it.
+
+        Note that priority.js loads AFTER healthScore.js only for readability —
+        priority never reads a health score, which is what lets the two numbers
+        legitimately disagree.
+    -->
+    <script src="js/scorecard/evidence.js"></script>
+    <script src="js/scorecard/detect.js"></script>
+    <script src="js/scorecard/identity.js"></script>
+    <script src="js/scorecard/segments.js"></script>
+    <script src="js/scorecard/confidence.js"></script>
+    <script src="js/scorecard/healthScore.js"></script>
+    <script src="js/scorecard/overrides.js"></script>
+    <script src="js/scorecard/priority.js"></script>
+    <script src="js/scorecard/queues.js"></script>
+    <script src="js/scorecard/actionRules.js"></script>
+    <script src="js/scorecard/actionEngine.js"></script>
+    <script src="js/scorecard/scorecardEngine.js"></script>
+    <script src="js/scorecard/history.js"></script>
+    <script src="js/scorecard/portfolio.js"></script>
+    <script src="js/scorecard/brief.js"></script>
+    <script src="js/scorecard/portfolioQuery.js"></script>
+
+    <!-- AI + approval. ai.enabled is false; sendingEnabled is false. -->
+    <script src="js/scorecard/ai.js"></script>
+    <script src="js/scorecard/approval.js"></script>
+
+    <!-- Feedback + metrics -->
+    <script src="js/scorecard/feedback.js"></script>
+    <script src="js/scorecard/metrics.js"></script>
+
     <!-- Orchestration + UI -->
     <script src="js/orchestrator.js"></script>
     <script src="js/ui/components.js"></script>
+    <script src="js/ui/parts.js"></script>
     <script src="js/ui/render.js"></script>
+    <script src="js/ui/feedback.js"></script>
+    <script src="js/ui/approval.js"></script>
+    <script src="js/ui/scorecard.js"></script>
+    <script src="js/ui/shell.js"></script>
+    <script src="js/ui/brief.js"></script>
+    <script src="js/ui/portfolioAi.js"></script>
+    <script src="js/ui/accountWorkspace.js"></script>
+    <script src="js/ui/portfolio.js"></script>
     <script src="js/ui/app.js"></script>
 
     <!-- MyGeotab lifecycle (last: everything above must already exist) -->

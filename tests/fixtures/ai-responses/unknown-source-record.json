@@ -1,0 +1,19 @@
+{
+  "note": "Cites a ticket that is not in the supplied context. Rejected as fabrication.",
+  "response": {
+    "model": "test-model",
+    "statements": [
+      {
+        "text": "Reviewed the open issue.",
+        "sourceRecords": [
+          "ticket-does-not-exist"
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "ok": false,
+    "kept": 0,
+    "dropped": 1
+  }
+}

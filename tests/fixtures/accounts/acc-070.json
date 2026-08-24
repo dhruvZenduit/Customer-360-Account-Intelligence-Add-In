@@ -1,0 +1,37 @@
+{
+  "id": "acc-070",
+  "name": "Kestrel Field Services",
+  "category": "billing",
+  "mock": true,
+  "proves": "Billing problems: a disputed rate with a large past-due balance and recorded customer impact. FIX via the billing rule.",
+  "account": {
+    "industry": "Utilities Field Service",
+    "status": "Active",
+    "customerSince": "2019-06-23",
+    "assetCount": 109,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 1,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

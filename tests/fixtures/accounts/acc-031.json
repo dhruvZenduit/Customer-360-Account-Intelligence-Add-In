@@ -1,0 +1,37 @@
+{
+  "id": "acc-031",
+  "name": "Atlas Municipal Services",
+  "category": "high-value",
+  "mock": true,
+  "proves": "High-value with a review at the edge of its enterprise cadence.",
+  "account": {
+    "industry": "Municipal Fleet",
+    "status": "Active",
+    "customerSince": "2015-01-26",
+    "assetCount": 890,
+    "contactProfile": "enterprise",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

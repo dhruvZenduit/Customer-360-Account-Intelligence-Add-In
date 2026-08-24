@@ -1,0 +1,38 @@
+{
+  "id": "acc-004",
+  "name": "Northline Freight Systems",
+  "category": "high-value",
+  "mock": true,
+  "proves": "A large, healthy, well-instrumented enterprise account with a genuine acquisition and expansion signals. Proves a healthy account can still be actionable, and that a news item announcing a Director of Safety does NOT fire the P0 safety override.",
+  "account": {
+    "industry": "Long-Haul Trucking",
+    "status": "Active",
+    "customerSince": "2018-01-11",
+    "assetCount": 1240,
+    "contactProfile": "enterprise",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Routing & Dispatch",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": "northline"
+  },
+  "sources": {
+    "quotes": 1,
+    "orders": 2,
+    "tickets": 2,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 3,
+    "external": 2,
+    "communications": 1,
+    "website": true,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": true,
+    "commitments": null
+  }
+}

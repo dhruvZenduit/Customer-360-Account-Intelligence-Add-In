@@ -1,0 +1,25 @@
+{
+  "note": "Invents a ticket number, a date and a monetary figure. All three are absent from the context, so the statement is DROPPED rather than corrected — repairing it would mean trusting the rest of a response that came from the same place.",
+  "response": {
+    "model": "test-model",
+    "statements": [
+      {
+        "text": "Ticket 99999 breached SLA on Jan 1, 2001 and we owe $84,000.",
+        "sourceRecords": [
+          "communication-bm"
+        ]
+      },
+      {
+        "text": "The customer confirmed all is well this month.",
+        "sourceRecords": [
+          "communication-bm"
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "kept": 1,
+    "dropped": 1
+  }
+}

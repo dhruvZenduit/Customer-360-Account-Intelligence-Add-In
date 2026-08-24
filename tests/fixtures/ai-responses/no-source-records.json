@@ -1,0 +1,16 @@
+{
+  "note": "A statement citing nothing. Dropped, not displayed — Phase 8 rule 2.",
+  "response": {
+    "model": "test-model",
+    "statements": [
+      {
+        "text": "The account seems to be going well."
+      }
+    ]
+  },
+  "expect": {
+    "ok": false,
+    "kept": 0,
+    "dropped": 1
+  }
+}

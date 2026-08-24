@@ -1,0 +1,127 @@
+{
+  "id": "recently-cancelled",
+  "name": "Recently cancelled account",
+  "category": "cancelled",
+  "proves": "Lifecycle resolves to churned from the cancellation record, not guessed from the status string alone.",
+  "data": {
+    "account": {
+      "id": "sc-churned",
+      "name": "Westgate Courier Co",
+      "domain": "sc-churned.example",
+      "status": "Active",
+      "customerSince": "2019-05-01",
+      "assetCount": 180,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "fleet-heavy",
+      "products": [
+        "Telematics Core",
+        "Driver Safety Cameras",
+        "Compliance / HOS",
+        "Routing & Dispatch",
+        "Asset Tracking"
+      ],
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [],
+    "billingIssues": [],
+    "technicalIssues": [],
+    "reviews": [
+      {
+        "id": "s-r1",
+        "date": "-30d",
+        "type": "Quarterly Business Review",
+        "mock": true
+      }
+    ],
+    "contacts": [
+      {
+        "id": "s-c1",
+        "name": "Dana Reyes",
+        "title": "Fleet Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c2",
+        "name": "Ana Lopez",
+        "title": "Director of Operations",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c3",
+        "name": "Ken Obi",
+        "title": "Director of Safety",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c4",
+        "name": "Rae Kim",
+        "title": "Procurement Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      }
+    ],
+    "external": [],
+    "deviceHealth": {
+      "available": true,
+      "deviceCount": 180,
+      "notCommunicating": 2,
+      "cameraAvailabilityPct": 98,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "portalUsage": {
+      "available": true,
+      "activeUsers": 62,
+      "previousActiveUsers": 60,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "contract": {
+      "id": "sc-k5",
+      "startDate": "2022-05-03",
+      "renewalDate": null,
+      "cancelledDate": "-22d",
+      "annualValue": 26000,
+      "mock": true
+    },
+    "communications": [
+      {
+        "id": "s-m1",
+        "date": "-9d",
+        "subject": "Thanks",
+        "body": "All good on our side this month.",
+        "author": "Dana Reyes",
+        "mock": true
+      }
+    ],
+    "commitments": [],
+    "outcomes": {
+      "available": true,
+      "trainingCompleted": true,
+      "trainingCompletedDate": "-40d",
+      "recommendationsImplemented": 2,
+      "improvements": [
+        {
+          "label": "Idling reduced",
+          "change": "-12%",
+          "date": "-30d"
+        }
+      ],
+      "mock": true
+    }
+  },
+  "expect": {}
+}

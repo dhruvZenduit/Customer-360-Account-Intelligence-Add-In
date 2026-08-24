@@ -1,0 +1,37 @@
+{
+  "id": "acc-060",
+  "name": "Northfork Waste Solutions",
+  "category": "technical",
+  "mock": true,
+  "proves": "Technical problems: 25% of devices dark, four camera tickets across three yards, an open technical escalation with recorded customer impact. The worst FIX account in the set.",
+  "account": {
+    "industry": "Waste Collection",
+    "status": "Active",
+    "customerSince": "2018-09-14",
+    "assetCount": 187,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 4,
+    "billingIssues": 0,
+    "technicalIssues": 1,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

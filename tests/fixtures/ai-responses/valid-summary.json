@@ -1,0 +1,20 @@
+{
+  "note": "A well-formed response. Every statement cites a source record present in the supplied context and asserts nothing beyond it.",
+  "response": {
+    "model": "test-model",
+    "statements": [
+      {
+        "text": "The customer confirmed all is well this month.",
+        "sourceRecords": [
+          "communication-bm"
+        ],
+        "confidence": "High"
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "kept": 1,
+    "dropped": 0
+  }
+}

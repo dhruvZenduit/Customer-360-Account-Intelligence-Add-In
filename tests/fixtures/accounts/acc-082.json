@@ -1,0 +1,37 @@
+{
+  "id": "acc-082",
+  "name": "Thornbury Seasonal Freight",
+  "category": "inactive",
+  "mock": true,
+  "proves": "Seasonal segment declared on the contract record, with a long gap in activity. Proves a declared segment overrides the asset-band fallback.",
+  "account": {
+    "industry": "Seasonal Haulage",
+    "status": "Active",
+    "customerSince": "2019-02-14",
+    "assetCount": 47,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

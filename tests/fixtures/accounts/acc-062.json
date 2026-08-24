@@ -1,0 +1,37 @@
+{
+  "id": "acc-062",
+  "name": "Halcyon Cold Chain",
+  "category": "technical",
+  "mock": true,
+  "proves": "Technical: repeat reefer-alert tickets. Proves the repeat-issue signal drives support health without a single critical ticket.",
+  "account": {
+    "industry": "Refrigerated Transport",
+    "status": "Active",
+    "customerSince": "2019-12-01",
+    "assetCount": 143,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 3,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "acc-032",
+  "name": "Grand Valley Bus Lines",
+  "category": "high-value",
+  "mock": true,
+  "proves": "High-value with an HOS compliance problem ahead of a DOT audit — a P0 from the HOS pattern set, scoped to tickets.",
+  "account": {
+    "industry": "Passenger Transport",
+    "status": "Active",
+    "customerSince": "2016-11-11",
+    "assetCount": 640,
+    "contactProfile": "enterprise",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 1,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

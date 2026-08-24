@@ -1,0 +1,37 @@
+{
+  "id": "acc-010",
+  "name": "Cedar Ridge Haulage",
+  "category": "healthy",
+  "mock": true,
+  "proves": "Healthy baseline with full stakeholder coverage — one of the accounts that lands in NO queue, which is what makes the portfolio's \"N accounts need no action today\" a real claim.",
+  "account": {
+    "industry": "Regional Trucking",
+    "status": "Active",
+    "customerSince": "2020-06-14",
+    "assetCount": 96,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 4,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": true,
+    "commitments": 0
+  }
+}

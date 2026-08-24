@@ -120,7 +120,18 @@ C360.orchestrator = (function () {
                 reflect(C360.contactService, accountId, ctx, opts, []),
                 // MyGeotab is best-effort and already never rejects, but it is
                 // wrapped the same way so it appears in the source strip.
-                reflect(C360.geotabService, accountId, ctx, opts, null)
+                reflect(C360.geotabService, accountId, ctx, opts, null),
+
+                // Scorecard sources. Each falls back to null / [] so an
+                // unavailable feed becomes "Data unavailable" downstream rather
+                // than a failed page load.
+                reflect(C360.deviceHealthService, accountId, ctx, opts, null),
+                reflect(C360.portalUsageService, accountId, ctx, opts, null),
+                reflect(C360.contractService, accountId, ctx, opts, null),
+                // null, not [] — "not a tracked source" is not "none outstanding".
+                reflect(C360.commitmentService, accountId, ctx, opts, null),
+                reflect(C360.communicationService, accountId, ctx, opts, []),
+                reflect(C360.outcomeService, accountId, ctx, opts, null)
             ]).then(function (results) {
                 var by = {};
                 results.forEach(function (result) { by[result.source] = result; });
@@ -133,7 +144,7 @@ C360.orchestrator = (function () {
                     by.contacts.value, website
                 );
 
-                var intelligence = C360.intelligenceEngine.run({
+                var intelligenceInput = {
                     account: account,
                     quotes: by.quotes.value,
                     orders: by.orders.value,
@@ -145,12 +156,41 @@ C360.orchestrator = (function () {
                     external: by.external.value,
                     contacts: contacts,
                     geotab: by.geotab.value
-                });
+                };
+
+                var intelligence = C360.intelligenceEngine.run(intelligenceInput);
+
+                /**
+                 * The scorecard runs over the SAME bundle plus the six extended
+                 * sources, and reuses the intelligence model rather than
+                 * recomputing signals, risks and opportunities — one derivation,
+                 * two readings of it.
+                 *
+                 * `asOf` is passed explicitly. Every scorecard engine is pure
+                 * and none of them reads the clock, which is what makes the
+                 * scenario suite deterministic.
+                 */
+                var asOf = new Date();
+                var scorecard = C360.scorecardEngine.run(
+                    Object.keys(intelligenceInput).reduce(function (all, key) {
+                        all[key] = intelligenceInput[key];
+                        return all;
+                    }, {
+                        deviceHealth: by.deviceHealth.value,
+                        portalUsage: by.portalUsage.value,
+                        contract: by.contract.value,
+                        commitments: by.commitments.value,
+                        communications: by.communications.value,
+                        outcomes: by.outcomes.value
+                    }),
+                    { asOf: asOf, intelligence: intelligence }
+                );
 
                 return {
                     intelligence: intelligence,
+                    scorecard: scorecard,
                     sources: [accountStatus].concat(results),
-                    lastUpdated: new Date(),
+                    lastUpdated: asOf,
                     dateFilterDays: displayDays,
                     isMock: C360.dataSource.isMock()
                 };
@@ -165,7 +205,9 @@ C360.orchestrator = (function () {
     function summariseSources(sources) {
         var groups = [
             { id: "internal", label: "Internal data",
-              members: ["account", "quotes", "orders", "tickets", "billing", "technical", "reviews", "contacts", "geotab"] },
+              members: ["account", "quotes", "orders", "tickets", "billing", "technical",
+                        "reviews", "contacts", "geotab", "deviceHealth", "portalUsage",
+                        "contract", "commitments", "communications", "outcomes"] },
             { id: "website", label: "Customer website", members: ["website"] },
             { id: "external", label: "External web", members: ["external"] }
         ];
@@ -191,8 +233,118 @@ C360.orchestrator = (function () {
         });
     }
 
+    /**
+     * PORTFOLIO REFRESH (Phase 6)
+     * ---------------------------
+     * A batch over the existing per-account pipeline — deliberately not a
+     * parallel fetch path, so caching, failure isolation and the manual-refresh
+     * bypass all behave exactly as they do on the account page.
+     *
+     * Two properties matter at portfolio scale:
+     *
+     *   BOUNDED CONCURRENCY. 127 accounts must not open 127 simultaneous
+     *   requests. `portfolio.refresh.maxConcurrentAccounts` caps the window, and
+     *   `_peakConcurrency` on the result is what the test asserts against —
+     *   a cap nobody measures is a cap that drifts.
+     *
+     *   PARTIAL FAILURE IS NORMAL. One account failing to load must never blank
+     *   the screen. Each account is reflected into a result or a failure entry,
+     *   and the caller renders what succeeded alongside a list of what did not.
+     *
+     * This is a controlled refresh, run on demand or on a schedule. Nothing here
+     * runs a model, and nothing here runs continuously.
+     *
+     * @param {string[]} accountIds
+     * @param {object} options { forceRefresh, dateFilterId, onProgress }
+     * @returns {Promise<{models, failures, lastUpdated, _peakConcurrency}>}
+     */
+    function loadPortfolio(accountIds, options) {
+        var opts = options || {};
+        var ids = util.list(accountIds);
+        var limit = Math.max(1, C360.scorecardConfig.portfolio.refresh.maxConcurrentAccounts);
+
+        var models = [];
+        var failures = [];
+        var next = 0;
+        var inFlight = 0;
+        var peak = 0;
+        var done = 0;
+
+        return new Promise(function (resolve) {
+            if (!ids.length) {
+                resolve({ models: [], failures: [], lastUpdated: new Date(), _peakConcurrency: 0 });
+                return;
+            }
+
+            function finish() {
+                resolve({
+                    models: models,
+                    failures: failures,
+                    lastUpdated: new Date(),
+                    /** Observed peak, so the concurrency bound is testable. */
+                    _peakConcurrency: peak
+                });
+            }
+
+            function pump() {
+                while (inFlight < limit && next < ids.length) {
+                    var accountId = ids[next++];
+                    inFlight++;
+                    if (inFlight > peak) { peak = inFlight; }
+
+                    /* eslint-disable no-loop-func */
+                    (function (id) {
+                        load(id, {
+                            forceRefresh: opts.forceRefresh === true,
+                            dateFilterId: opts.dateFilterId
+                        }).then(function (result) {
+                            models.push(result.scorecard);
+                            // Per-source failures inside a successfully loaded
+                            // account are reported too — the account rendered,
+                            // but the user should know its picture is partial.
+                            util.list(result.sources).forEach(function (source) {
+                                if (source.ok) { return; }
+                                failures.push({
+                                    accountId: id,
+                                    accountName: result.scorecard
+                                        ? result.scorecard.accountName : null,
+                                    source: source.source,
+                                    label: source.label,
+                                    error: source.error,
+                                    fatal: false
+                                });
+                            });
+                        }).catch(function (error) {
+                            // The account itself could not be identified. Listed
+                            // and skipped; the other accounts still render.
+                            failures.push({
+                                accountId: id,
+                                accountName: null,
+                                source: "account",
+                                label: "Account record",
+                                error: error && error.message ? error.message : "Unavailable",
+                                fatal: true
+                            });
+                        }).then(function () {
+                            inFlight--;
+                            done++;
+                            if (typeof opts.onProgress === "function") {
+                                opts.onProgress({ done: done, total: ids.length });
+                            }
+                            if (done === ids.length) { finish(); } else { pump(); }
+                        });
+                    }(accountId));
+                    /* eslint-enable no-loop-func */
+                }
+            }
+
+            pump();
+        });
+    }
+
     return {
         load: load,
+        loadPortfolio: loadPortfolio,
         summariseSources: summariseSources,
         daysForFilter: daysForFilter
     };

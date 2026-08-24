@@ -1,0 +1,36 @@
+{
+  "id": "acc-002",
+  "name": "ABC Waste Services",
+  "category": "at-risk",
+  "mock": true,
+  "proves": "No device feed and no outcomes at all, so health re-normalises across the remaining categories and says so on the face of the breakdown. Also carries competitor-switch language and an approaching renewal.",
+  "account": {
+    "industry": "Waste & Environmental Services",
+    "status": "Active — Renewal in 90 days",
+    "customerSince": "2019-08-02",
+    "assetCount": 168,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": "abc_waste"
+  },
+  "sources": {
+    "quotes": 1,
+    "orders": 2,
+    "tickets": 3,
+    "billingIssues": 2,
+    "technicalIssues": 0,
+    "reviews": 0,
+    "contacts": 2,
+    "external": 2,
+    "communications": 1,
+    "website": true,
+    "deviceHealth": false,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

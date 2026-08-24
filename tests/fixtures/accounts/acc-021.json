@@ -1,0 +1,37 @@
+{
+  "id": "acc-021",
+  "name": "Ironwood Carriers",
+  "category": "at-risk",
+  "mock": true,
+  "proves": "At-risk via competitor language in a customer email plus a near renewal. SAVE queue.",
+  "account": {
+    "industry": "Flatbed Trucking",
+    "status": "Active",
+    "customerSince": "2019-04-18",
+    "assetCount": 78,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 1,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

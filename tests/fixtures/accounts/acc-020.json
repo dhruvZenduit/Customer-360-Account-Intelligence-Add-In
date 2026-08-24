@@ -1,0 +1,37 @@
+{
+  "id": "acc-020",
+  "name": "Sable Creek Transport",
+  "category": "at-risk",
+  "mock": true,
+  "proves": "At-risk: repeat connectivity issues, an ageing escalated ticket, a stale review and corroborated negative sentiment. Proves corroborated sentiment scores materially worse than a single frustrated email.",
+  "account": {
+    "industry": "Bulk Freight",
+    "status": "Active",
+    "customerSince": "2018-11-05",
+    "assetCount": 132,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 3,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 1,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

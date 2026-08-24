@@ -1,0 +1,35 @@
+{
+  "id": "acc-003",
+  "name": "XYZ Logistics",
+  "category": "inactive",
+  "mock": true,
+  "proves": "Almost nothing recorded. Too few categories have data to report a health score at all, so health is UNAVAILABLE with a reason rather than a low number, and confidence is correspondingly low. `commitments: null` — untracked, not empty.",
+  "account": {
+    "industry": "Freight Brokerage",
+    "status": "Active",
+    "customerSince": "2025-11-20",
+    "assetCount": 34,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 0,
+    "contacts": 0,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": false,
+    "portalUsage": false,
+    "contract": true,
+    "outcomes": false,
+    "commitments": null
+  }
+}

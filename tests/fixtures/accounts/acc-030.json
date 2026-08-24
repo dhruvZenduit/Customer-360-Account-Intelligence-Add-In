@@ -1,0 +1,37 @@
+{
+  "id": "acc-030",
+  "name": "Meridian Continental Freight",
+  "category": "high-value",
+  "mock": true,
+  "proves": "High-value, healthy, strong outcomes. Proves account value raises strategic importance without inventing urgency.",
+  "account": {
+    "industry": "Long-Haul Trucking",
+    "status": "Active",
+    "customerSince": "2014-03-09",
+    "assetCount": 2100,
+    "contactProfile": "enterprise",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 4,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": true,
+    "commitments": 0
+  }
+}

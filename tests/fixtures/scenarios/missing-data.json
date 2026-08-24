@@ -1,0 +1,37 @@
+{
+  "id": "missing-data",
+  "name": "Missing data across most categories",
+  "category": "inactive",
+  "proves": "No fabricated score inputs. Health is reported UNAVAILABLE with a reason rather than as a low number, confidence drops, and the limitations list says what is missing. `commitments` is omitted entirely, so the commitments factor reports itself unavailable rather than scoring zero.",
+  "data": {
+    "account": {
+      "id": "sc-thin",
+      "name": "Greywater Marine Supply",
+      "domain": "sc-thin.example",
+      "status": "Active",
+      "customerSince": "2018-08-29",
+      "assetCount": 31,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "small-business",
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [],
+    "billingIssues": [],
+    "technicalIssues": [],
+    "reviews": [],
+    "contacts": [],
+    "external": [],
+    "deviceHealth": null,
+    "portalUsage": null,
+    "contract": null,
+    "communications": [],
+    "outcomes": null
+  },
+  "expect": {
+    "healthAvailable": false,
+    "confidenceAtMost": 60,
+    "hasLimitations": true
+  }
+}

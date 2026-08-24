@@ -1,0 +1,37 @@
+{
+  "id": "acc-012",
+  "name": "Harbour Point Logistics",
+  "category": "healthy",
+  "mock": true,
+  "proves": "Healthy small-business account, perfect devices, full coverage. No queue.",
+  "account": {
+    "industry": "Port Drayage",
+    "status": "Active",
+    "customerSince": "2021-09-30",
+    "assetCount": 58,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 4,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

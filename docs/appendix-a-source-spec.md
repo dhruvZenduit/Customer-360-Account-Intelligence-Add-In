@@ -2,7 +2,7 @@
 
 > This is the ORIGINAL, unedited 48-section brief, preserved byte-for-byte below the
 > rule so nothing is lost in the phased rewrite. The phased plan lives in
-> [`../newStuff.txt`](../newStuff.txt) and the per-phase docs in this folder.
+> [the phase index](./README.md) and the per-phase docs in this folder.
 >
 > If a phase doc and this appendix disagree, THIS APPENDIX WINS — it is the source of truth.
 

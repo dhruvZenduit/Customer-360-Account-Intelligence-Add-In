@@ -1,0 +1,37 @@
+{
+  "id": "acc-001",
+  "name": "Acme Transportation",
+  "category": "at-risk",
+  "mock": true,
+  "proves": "The fully-instrumented account: every source present, a cancellation signal in a customer email, a past-due balance, a renewal inside the window, an overdue commitment and a critical escalated ticket. The account that exercises the most rules at once.",
+  "account": {
+    "industry": "Transportation & Logistics",
+    "status": "Active",
+    "customerSince": "2021-03-15",
+    "assetCount": 412,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": "acme_transport"
+  },
+  "sources": {
+    "quotes": 3,
+    "orders": 3,
+    "tickets": 6,
+    "billingIssues": 1,
+    "technicalIssues": 2,
+    "reviews": 2,
+    "contacts": 4,
+    "external": 3,
+    "communications": 2,
+    "website": true,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": true,
+    "commitments": 2
+  }
+}
