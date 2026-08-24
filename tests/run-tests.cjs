@@ -106,7 +106,10 @@ const FILES = [
     "js/scorecard/actionRules.js",
     "js/scorecard/actionEngine.js",
     "js/scorecard/scorecardEngine.js",
+    "js/scorecard/history.js",
     "js/scorecard/portfolio.js",
+    "js/scorecard/brief.js",
+    "js/scorecard/portfolioQuery.js",
     "js/scorecard/ai.js",
     "js/scorecard/approval.js",
     "js/scorecard/feedback.js",
@@ -116,10 +119,15 @@ const FILES = [
     // UI string builders. These are pure functions — they return HTML rather
     // than touching the DOM — so they are testable here without a browser.
     "js/ui/components.js",
+    "js/ui/parts.js",
     "js/ui/render.js",
     "js/ui/feedback.js",
     "js/ui/approval.js",
     "js/ui/scorecard.js",
+    "js/ui/shell.js",
+    "js/ui/brief.js",
+    "js/ui/portfolioAi.js",
+    "js/ui/accountWorkspace.js",
     "js/ui/portfolio.js"
 ];
 

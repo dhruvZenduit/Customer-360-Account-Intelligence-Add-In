@@ -34,11 +34,79 @@ C360.portfolio = (function () {
     function cfg() { return C360.scorecardConfig.portfolio; }
 
     /**
+     * The SLA breach on an account, as a number of days.
+     *
+     * Read off the fired override's FIRST evidence row, which the override has
+     * already ordered worst-severity-first — the same ticket its `reason`
+     * string names.
+     *
+     * Picking the oldest breach instead looked more alarming and was worse: a
+     * queue row would read "SLA breach · 33 days" beside a reason naming a
+     * different, 12-day ticket. Two numbers disagreeing on one row is how a
+     * user stops believing either of them, and severity is the right ordering
+     * anyway — a critical ticket 12 days late matters more than a medium one 33
+     * days late.
+     */
+    function slaBreachOf(model, asOf) {
+        var override = util.list(model.priority && model.priority.firedOverrides)
+            .filter(function (item) { return item.rule === "criticalTicketBeyondSla"; })[0];
+        if (!override) { return null; }
+
+        var evidence = util.list(override.evidence)[0];
+        if (!evidence) { return null; }
+
+        var days = util.daysAgo(evidence.date, asOf);
+        if (days === null) { return null; }
+
+        return {
+            days: days,
+            ticketId: evidence.id,
+            label: evidence.label,
+            /** How many tickets are breaching in total, for the drawer. */
+            count: util.list(override.evidence).length
+        };
+    }
+
+    /**
+     * The single most useful thing to do on this account, if anything.
+     *
+     * The first recommendation, which is already ordered by queue precedence
+     * (SAVE before FIX before GROW before ENGAGE) — so "next best" is the
+     * engine's ordering, not a judgement the view makes.
+     */
+    function nextActionOf(model) {
+        var recommendation = util.list(model.recommendations)[0];
+        if (!recommendation) { return null; }
+
+        var labels = C360.scorecardConfig.queues.actionLabels;
+        return {
+            id: recommendation.id,
+            rule: recommendation.rule,
+            queue: recommendation.queue,
+            /** The short imperative for the headline. */
+            label: labels[recommendation.rule] || recommendation.action.summary,
+            summary: recommendation.action.summary,
+            why: recommendation.why,
+            steps: util.list(recommendation.action.steps),
+            owner: recommendation.owner.label,
+            due: recommendation.due.label,
+            confidence: recommendation.confidence,
+            evidence: util.list(recommendation.evidence)
+        };
+    }
+
+    /**
      * One row per account, flattened from a scorecard model into the fields the
-     * screen sorts, filters and searches on.
+     * screen sorts, filters, searches and renders.
+     *
+     * `asOf` comes from the model, never the clock, so the row is as
+     * deterministic as the model behind it.
      */
     function row(model) {
         var summary = model.summary || {};
+        var asOf = model.asOf || null;
+        var renewalDays = C360.segments.daysUntil(summary.renewalDate, asOf);
+
         return {
             accountId: model.accountId,
             accountName: model.accountName,
@@ -50,13 +118,24 @@ C360.portfolio = (function () {
             priorityScore: summary.priorityScore,
             primaryQueue: summary.primaryQueue,
             segment: summary.segment,
+            segmentLabel: model.segment ? model.segment.segmentLabel : null,
             lifecycle: summary.lifecycle,
+            lifecycleLabel: model.segment ? model.segment.lifecycleLabel : null,
             renewalDate: summary.renewalDate,
+            /** Days to renewal, or null. Negative once it has passed. */
+            renewalDays: renewalDays === null || renewalDays < 0 ? null : renewalDays,
             accountValue: summary.accountValue,
             recommendationCount: summary.recommendationCount,
             reasons: util.list(model.priority && model.priority.reasons),
             queues: model.queues || { primaryQueue: null, queues: [] },
             firedOverrides: util.list(model.priority && model.priority.firedOverrides),
+
+            /** The one-line reason the queue row shows under the account name. */
+            headline: model.priority ? model.priority.primaryReason : null,
+            slaBreach: slaBreachOf(model, asOf),
+            nextAction: nextActionOf(model),
+            asOf: asOf,
+
             /** The full model, so a row can open the account view without refetching. */
             model: model
         };
@@ -95,11 +174,35 @@ C360.portfolio = (function () {
         var levelSum = levels.P0 + levels.P1 + levels.P2 + levels.P3;
         var queueCounts = C360.queues.rollup(rows);
 
+        /**
+         * Portfolio ARR. Summed only over accounts that actually record a
+         * contract value — `valueKnownFor` says how many, so the figure is never
+         * read as covering the whole portfolio when it does not.
+         */
+        var withValue = util.list(rows).filter(function (item) {
+            return item.accountValue !== null && item.accountValue !== undefined;
+        });
+        var arrTotal = withValue.reduce(function (sum, item) {
+            return sum + item.accountValue;
+        }, 0);
+
+        /** Accounts with at least one recommendation to act on. */
+        var needAction = util.list(rows).filter(function (item) {
+            return item.recommendationCount > 0;
+        }).length;
+
         return {
             total: total,
             bands: bands,
             levels: levels,
             queues: queueCounts,
+
+            /** P0 + P1 — the "act today" count the header strip leads with. */
+            urgent: levels.P0 + levels.P1,
+            needAction: needAction,
+            arrTotal: withValue.length ? arrTotal : null,
+            arrKnownFor: withValue.length,
+            arrCoversAll: withValue.length === total,
 
             /**
              * Surfaced, not asserted. If either sum is wrong the screen says so
@@ -238,6 +341,125 @@ C360.portfolio = (function () {
                 accountIds: matching.map(function (item) { return item.accountId; })
             };
         }).filter(function (signal) { return signal.count > 0; });
+    }
+
+    // -----------------------------------------------------------------
+    // Latest portfolio signals
+    // -----------------------------------------------------------------
+
+    /**
+     * A chronological feed of what the portfolio actually recorded, newest
+     * first.
+     *
+     * Every entry is a REAL source record with a REAL date — a fired override's
+     * evidence, or a queue rule's. Nothing is synthesised, and the timestamps
+     * are the records' own, not the time of the scoring run. That distinction
+     * matters: a feed showing "12:26" for every entry because that is when the
+     * refresh ran would look live and mean nothing.
+     *
+     * The UI labels this "Latest portfolio signals · last updated HH:MM" rather
+     * than anything implying a continuously running process, because nothing
+     * runs continuously.
+     */
+    function signalFeed(rows, limit) {
+        var out = [];
+        var seen = {};
+
+        util.list(rows).forEach(function (item) {
+            function push(evidence, tone, text) {
+                if (!evidence || !evidence.date) { return; }
+                var key = item.accountId + ":" + evidence.type + ":" + evidence.id;
+                if (seen[key]) { return; }
+                seen[key] = true;
+                out.push({
+                    accountId: item.accountId,
+                    accountName: item.accountName,
+                    date: evidence.date,
+                    tone: tone,
+                    text: text,
+                    recordType: evidence.type,
+                    recordId: evidence.id,
+                    excerpt: evidence.excerpt || null
+                });
+            }
+
+            // Fired overrides first: these are the statements the product is
+            // most confident about.
+            item.firedOverrides.forEach(function (override) {
+                var tone = override.level === "P0" ? "critical"
+                         : override.level === "P1" ? "warning" : "info";
+                push(util.list(override.evidence)[0], tone, override.rule);
+            });
+
+            // Then the queue rules, which cover the operational signals an
+            // override does not (device problems, expansion, coverage gaps).
+            util.list(item.queues.queues).forEach(function (queue) {
+                util.list(queue.rules).forEach(function (rule) {
+                    var tone = queue.key === "save" ? "critical"
+                             : queue.key === "fix" ? "warning"
+                             : queue.key === "grow" ? "healthy" : "info";
+                    push(util.list(rule.evidence)[0], tone, rule.reason);
+                });
+            });
+        });
+
+        return out.sort(util.byDateDesc).slice(0, limit || 12);
+    }
+
+    // -----------------------------------------------------------------
+    // Portfolio matrix
+    // -----------------------------------------------------------------
+
+    /**
+     * Health (x) against priority (y), as percentages, ready to position.
+     *
+     * Priority is inverted so HIGH sits at the top, which is how the axis is
+     * labelled and how anybody reads it.
+     *
+     * An account whose health is unavailable is NOT plotted at zero — it is
+     * returned in `unplaced` with its reason. Dropping it silently would hide
+     * it; plotting it at zero would assert it is critical, which is exactly the
+     * lie Phase 2 exists to prevent.
+     */
+    function matrix(rows) {
+        var placed = [];
+        var unplaced = [];
+
+        util.list(rows).forEach(function (item) {
+            if (!item.healthAvailable) {
+                unplaced.push({
+                    accountId: item.accountId,
+                    accountName: item.accountName,
+                    priorityLevel: item.priorityLevel,
+                    priorityScore: item.priorityScore,
+                    reason: "Health could not be scored, so this account cannot be "
+                          + "placed on the health axis."
+                });
+                return;
+            }
+
+            placed.push({
+                accountId: item.accountId,
+                accountName: item.accountName,
+                /** 0 = critical health (left), 100 = healthy (right). */
+                x: Math.max(0, Math.min(100, item.healthScore)),
+                /** 0 = low priority (bottom), 100 = high priority (top). */
+                y: Math.max(0, Math.min(100, item.priorityScore)),
+                healthScore: item.healthScore,
+                healthBand: item.healthBand,
+                priorityLevel: item.priorityLevel,
+                priorityScore: item.priorityScore,
+                primaryQueue: item.primaryQueue,
+                accountValue: item.accountValue,
+                renewalDays: item.renewalDays,
+                segmentLabel: item.segmentLabel
+            });
+        });
+
+        // Most urgent last, so the dots that matter paint on top.
+        placed.sort(function (a, b) { return a.priorityScore - b.priorityScore; });
+
+        return { placed: placed, unplaced: unplaced };
     }
 
     // -----------------------------------------------------------------
@@ -524,6 +746,18 @@ C360.portfolio = (function () {
             queueCards[key] = C360.queues.cards(rows, key);
         });
 
+        /**
+         * The priority queue for the left panel: P0 and P1 only, most urgent
+         * first. Deliberately not the top-N list — the top-N is capped at ten
+         * and includes P2s, and an operational queue should show everything
+         * that is actually urgent and nothing that is not.
+         */
+        var urgentRows = rows.filter(function (item) {
+            return item.priorityLevel === "P0" || item.priorityLevel === "P1";
+        }).sort(function (a, b) {
+            return (b.priorityScore || 0) - (a.priorityScore || 0);
+        });
+
         return {
             /** Every count below is derived from `models`. Nothing is a placeholder. */
             summary: summary,
@@ -531,6 +765,12 @@ C360.portfolio = (function () {
             /** Top-N is computed over the FULL portfolio, not the filtered view. */
             topPriorities: topPriorities(rows, cfg().topPriorityCount),
             queueCards: queueCards,
+
+            /** The three-panel command center's own views over the same rows. */
+            urgent: urgentRows,
+            feed: signalFeed(rows, 14),
+            matrix: matrix(rows),
+
             rows: sorted,
             allRows: rows,
             filters: opts.filters || {},
@@ -545,12 +785,24 @@ C360.portfolio = (function () {
         };
     }
 
+    /** Find one row by account id. */
+    function rowFor(view, accountId) {
+        return util.list(view && view.allRows).filter(function (item) {
+            return item.accountId === accountId;
+        })[0] || null;
+    }
+
     return {
         build: build,
         row: row,
+        rowFor: rowFor,
         summarise: summarise,
         topPriorities: topPriorities,
         signals: signals,
+        signalFeed: signalFeed,
+        matrix: matrix,
+        nextActionOf: nextActionOf,
+        slaBreachOf: slaBreachOf,
         applyFilters: applyFilters,
         applySort: applySort,
         search: search,

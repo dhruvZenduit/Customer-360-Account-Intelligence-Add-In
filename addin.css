@@ -3,17 +3,37 @@
  * =====================
  * Everything is scoped under #c360-app. MyGeotab injects this page into its
  * own document, so a bare selector like `h2 { }` or `.card { }` would leak out
- * and restyle MyGeotab itself.
+ * and restyle MyGeotab itself. That constraint is also why there is no CSS
+ * framework here: a utility framework's preflight would reset MyGeotab's own
+ * UI, not just this page.
  *
- * Design intent (spec section 28): an internal enterprise intelligence tool.
- * Dense but readable, strong hierarchy, minimal decoration, and colour used
- * sparingly — always as a second cue alongside a text label, never as the only
- * carrier of meaning.
+ * DESIGN INTENT: a dark, high-density operations command center. An internal
+ * team opens this at 8am to answer one question — who should I care about
+ * today, why, and exactly what should I do — and the interface is arranged to
+ * answer it in that order, on one screen, without hunting.
  *
- * Colour is reserved for exactly three jobs:
- *   1. source attribution   internal / customer website / external web
- *   2. severity             good / watch / bad
- *   3. the mock-data marker, which is deliberately the loudest thing here
+ * The density is the point. This is closer to a trading terminal or an
+ * intelligence workspace than to a marketing dashboard: small type, tight
+ * rhythm, monospace for anything numeric, and a lot of real information per
+ * square inch. There are no decorative charts and no giant gauges.
+ *
+ * COLOUR IS EARNED, NEVER DECORATIVE. On a dark ground, saturated colour is
+ * loud, so it is rationed to five jobs:
+ *
+ *   1. priority level      P0 red, P1 amber, P2 yellow, P3 slate
+ *   2. severity            healthy / warning / critical
+ *   3. source attribution  internal / customer website / external web
+ *   4. model-derived       one violet, used nowhere else
+ *   5. the mock-data marker, deliberately the loudest thing on the page
+ *
+ * A whole card is never painted red, amber or green. State is carried by a
+ * 2px left border, a small status dot, and a very low-opacity wash — and
+ * ALWAYS alongside the state in words, so colour is a second cue and never the
+ * only carrier of meaning. Every priority dot sits next to its literal "P0".
+ *
+ * Tokens are the whole theme. The legacy account-dashboard components below
+ * were written against these variables, so the dark treatment reaches them
+ * without any of them being touched.
  */
 
 /* ================================================================== */
@@ -21,64 +41,148 @@
 /* ================================================================== */
 
 #c360-app {
-    --c360-bg: #f4f6f8;
-    --c360-surface: #ffffff;
-    --c360-surface-alt: #fafbfc;
-    --c360-border: #dfe3e8;
-    --c360-border-strong: #c3cad3;
+    /* ---- ground and surfaces ------------------------------------- */
+    --c360-bg: #080B10;
+    --c360-surface: #0D1117;
+    --c360-surface-alt: #10151D;
+    --c360-surface-raised: #121821;
+    --c360-border: #1B2430;
+    --c360-border-strong: #222C38;
 
-    --c360-text: #16202b;
-    --c360-text-muted: #566374;
-    --c360-text-faint: #8794a3;
+    --c360-text: #F1F5F9;
+    --c360-text-muted: #94A3B8;
+    --c360-text-faint: #64748B;
 
-    --c360-accent: #1f4e8c;
-    --c360-accent-soft: #e8eef7;
-
-    --c360-good: #0f6f45;
-    --c360-good-bg: #e6f4ec;
-    --c360-watch: #8a5300;
-    --c360-watch-bg: #fdf2e0;
-    --c360-bad: #a4231a;
-    --c360-bad-bg: #fbeceb;
-    --c360-neutral-bg: #eef1f4;
-
-    --c360-website: #10635a;
-    --c360-website-bg: #e4f2f0;
-    --c360-external: #8a5312;
-    --c360-external-bg: #f7efe5;
-
-    --c360-mock: #9d174d;
-    --c360-mock-bg: #fde8ef;
-
-    /*
-     * Soft border tints. State on a card is carried by its border colour and
-     * a faint wash, not by a thick coloured strip down one edge — and never
-     * by colour alone: every toned card also prints its state in words
-     * (an "Escalated" chip, a "High" severity chip, a direction label).
+    /* ---- status ---------------------------------------------------
+     * Backgrounds are rgba rather than solid, so a wash sits ON the
+     * surface it is over instead of punching a lighter rectangle
+     * through it. At 10-14% these read as a tint, not a fill.
      */
-    --c360-good-line: #bcdfcd;
-    --c360-good-wash: #f5fbf8;
-    --c360-watch-line: #ecd5a9;
-    --c360-watch-wash: #fefbf5;
-    --c360-bad-line: #eec5c1;
-    --c360-bad-wash: #fdf8f7;
-    --c360-accent-line: #bed2ed;
-    --c360-accent-wash: #f8fafd;
+    --c360-accent: #3B82F6;
+    --c360-accent-hover: #2563EB;
+    --c360-accent-soft: rgba(59, 130, 246, 0.14);
+    --c360-on-accent: #F8FAFC;
+
+    --c360-good: #22C55E;
+    --c360-good-bg: rgba(34, 197, 94, 0.12);
+    --c360-watch: #F59E0B;
+    --c360-watch-bg: rgba(245, 158, 11, 0.12);
+    --c360-bad: #EF4444;
+    --c360-bad-hover: #DC2626;
+    --c360-bad-bg: rgba(239, 68, 68, 0.12);
+    --c360-neutral-bg: rgba(148, 163, 184, 0.10);
+
+    /* Source attribution. Distinct hues, deliberately desaturated so a
+       provenance badge never competes with a status indicator. */
+    --c360-website: #5EEAD4;
+    --c360-website-bg: rgba(94, 234, 212, 0.10);
+    --c360-external: #FCD34D;
+    --c360-external-bg: rgba(252, 211, 77, 0.10);
+
+    /* Model-derived content. One violet, used for nothing else, so the
+       marker is unambiguous wherever it appears. */
+    --c360-ai: #8B5CF6;
+    --c360-ai-bg: rgba(139, 92, 246, 0.14);
+    --c360-ai-line: rgba(139, 92, 246, 0.34);
+
+    /* The mock badge is meant to be the loudest thing on the page. */
+    --c360-mock: #F472B6;
+    --c360-mock-bg: rgba(244, 114, 182, 0.14);
+
+    /* ---- priority scale ------------------------------------------
+     * The one genuinely new visual concept: a four-step urgency ramp.
+     * Always rendered as a dot NEXT TO the literal "P0"/"P1" text, so
+     * removing the colour entirely loses no information.
+     */
+    --c360-p0: #EF4444;
+    --c360-p1: #F59E0B;
+    --c360-p2: #EAB308;
+    --c360-p3: #64748B;
+
+    /* ---- lines and washes ---------------------------------------
+     * State on a card is a 2px left border plus a wash at 4-6%, never
+     * a saturated fill. Anything louder reads as an alert, and a screen
+     * where twenty things are alerting has no hierarchy at all.
+     */
+    --c360-good-line: rgba(34, 197, 94, 0.30);
+    --c360-good-wash: rgba(34, 197, 94, 0.05);
+    --c360-watch-line: rgba(245, 158, 11, 0.30);
+    --c360-watch-wash: rgba(245, 158, 11, 0.05);
+    --c360-bad-line: rgba(239, 68, 68, 0.32);
+    --c360-bad-wash: rgba(239, 68, 68, 0.06);
+    --c360-accent-line: rgba(59, 130, 246, 0.30);
+    --c360-accent-wash: rgba(59, 130, 246, 0.05);
+
+    /* ---- type ----------------------------------------------------
+     * Inter for UI, a mono for every number. The mono is not decoration:
+     * tabular figures mean a column of scores lines up and a changing
+     * clock does not reflow, which is what makes a dense readout
+     * scannable rather than jittery.
+     *
+     * Both stacks degrade to good system faces, so the interface is
+     * correct with no webfont at all.
+     */
+    --c360-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont,
+                 Roboto, Helvetica, Arial, sans-serif;
+    --c360-mono: "JetBrains Mono", "IBM Plex Mono", "Cascadia Mono",
+                 ui-monospace, SFMono-Regular, Consolas, monospace;
 
     --c360-radius: 6px;
     --c360-gap: 16px;
 
+    /* Chrome dimensions, referenced by the shell layout. */
+    --c360-rail: 52px;
+    --c360-rail-open: 208px;
+
     box-sizing: border-box;
     min-height: 100vh;
-    padding: 0 0 40px;
+    padding: 0;
     margin: 0;
 
     background: var(--c360-bg);
     color: var(--c360-text);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-    font-size: 14px;
+    font-family: var(--c360-font);
+    font-size: 13px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /*
+     * BACKGROUND TREATMENT. A faint technical grid plus two very low-opacity
+     * radial washes. Deliberately near-invisible — its whole job is to stop a
+     * near-black page reading as an empty void, and the moment it is
+     * noticeable it is competing with the data. Nothing here exceeds 4%.
+     */
+    background-image:
+        radial-gradient(900px 500px at 12% -8%, rgba(59, 130, 246, 0.055), transparent 70%),
+        radial-gradient(800px 460px at 92% 4%, rgba(139, 92, 246, 0.04), transparent 70%),
+        linear-gradient(rgba(148, 163, 184, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.028) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 34px, 34px 100%;
+    background-attachment: fixed;
+}
+
+/* Selection has to be legible on a dark ground. */
+#c360-app ::selection {
+    background: var(--c360-accent-soft);
+    color: var(--c360-text);
+}
+
+/* Scrollbars, so the panels do not sprout light-grey system bars. */
+#c360-app *::-webkit-scrollbar { width: 9px; height: 9px; }
+#c360-app *::-webkit-scrollbar-track { background: transparent; }
+#c360-app *::-webkit-scrollbar-thumb {
+    background: var(--c360-border-strong);
+    border-radius: 5px;
+}
+#c360-app *::-webkit-scrollbar-thumb:hover { background: #2C3846; }
+
+/* Every number in the interface. */
+#c360-app .c360-mono,
+#c360-app .c360-num {
+    font-family: var(--c360-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
 }
 
 #c360-app *,
@@ -156,7 +260,7 @@
     display: inline-block;
     padding: 3px 7px;
     background: var(--c360-accent);
-    color: #ffffff;
+    color: var(--c360-on-accent);
     border-radius: var(--c360-radius);
     font-size: 12px;
     font-weight: 700;
@@ -251,7 +355,7 @@
 
     background: var(--c360-mock-bg);
     border-bottom: 2px solid var(--c360-mock);
-    color: #6b0f36;
+    color: var(--c360-mock);
     font-size: 13px;
 }
 
@@ -423,7 +527,7 @@
 .c360-filter.is-active {
     background: var(--c360-accent);
     border-color: var(--c360-accent);
-    color: #ffffff;
+    color: var(--c360-on-accent);
     font-weight: 600;
 }
 
@@ -442,7 +546,7 @@
 .c360-button {
     padding: 7px 14px;
     background: var(--c360-accent);
-    color: #ffffff;
+    color: var(--c360-on-accent);
     border: 1px solid var(--c360-accent);
     border-radius: var(--c360-radius);
     font-size: 13px;
@@ -450,7 +554,7 @@
     cursor: pointer;
 }
 
-.c360-button:hover { background: #17406f; }
+.c360-button:hover { background: var(--c360-accent-hover); }
 .c360-button:disabled { opacity: 0.6; cursor: default; }
 
 /* ================================================================== */
@@ -1481,13 +1585,6 @@
  * genuinely new visual concept in this phase. Health bands, queues and tones
  * reuse the good/watch/bad tokens that already exist.
  */
-
-#c360-app {
-    --c360-p0: #a4231a;
-    --c360-p1: #b45309;
-    --c360-p2: #8a6d00;
-    --c360-p3: #4b5b6b;
-}
 
 /* ---- view switch ------------------------------------------------- */
 
@@ -2581,7 +2678,7 @@
 }
 
 .c360-button--primary { background: var(--c360-bad); }
-.c360-button--primary:hover:not(:disabled) { background: #8c1d15; }
+.c360-button--primary:hover:not(:disabled) { background: var(--c360-bad-hover); }
 
 /*
  * Why the send control is disabled — printed next to it, never in a tooltip.
@@ -2761,8 +2858,2049 @@
     .c360-pf-filters { gap: 12px; }
 }
 
-/* Respect a user's reduced-motion preference: nothing here animates, but
-   any future transition must honour it. */
+/* ================================================================== */
+/* APPLICATION SHELL                                                  */
+/* ================================================================== */
+/*
+ * A thin icon rail, a compact command header, and then the workspace gets
+ * everything else. Optimised for 1440px: at that width the three-panel
+ * workspace is the majority of the screen and the chrome is under 120px tall.
+ *
+ * There is no hero header. A command center that spends 200px telling you its
+ * own name is a command center you scroll past every morning.
+ */
+
+.c360-appshell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+}
+
+/* ---- left rail ---------------------------------------------------- */
+/*
+ * Collapsed to 52px, expanding to 208px on hover or focus-within. Hover alone
+ * would strand keyboard users, so focus-within opens it too and the labels are
+ * always in the DOM for screen readers rather than being revealed by CSS.
+ */
+
+.c360-rail {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: none;
+    width: var(--c360-rail);
+    height: 100vh;
+    padding: 12px 8px;
+    background: var(--c360-surface);
+    border-right: 1px solid var(--c360-border);
+    overflow: hidden;
+    transition: width 200ms ease;
+}
+
+.c360-rail:hover,
+.c360-rail:focus-within { width: var(--c360-rail-open); }
+
+.c360-rail-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 34px;
+    padding: 0 7px;
+    margin-bottom: 10px;
+    flex: none;
+}
+
+.c360-rail-glyph {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    flex: none;
+    font-family: var(--c360-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c360-on-accent);
+    background: var(--c360-accent);
+    border-radius: 5px;
+}
+
+.c360-rail-wordmark {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--c360-text-muted);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.c360-rail:hover .c360-rail-wordmark,
+.c360-rail:focus-within .c360-rail-wordmark { opacity: 1; }
+
+.c360-rail-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 36px;
+    padding: 0 8px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 550;
+    color: var(--c360-text-faint);
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.c360-rail-item:hover:not(:disabled) {
+    color: var(--c360-text);
+    background: var(--c360-surface-alt);
+}
+
+.c360-rail-item.is-active {
+    color: var(--c360-text);
+    background: var(--c360-accent-soft);
+}
+
+/* The 2px active marker, so the current screen is not colour-only. */
+.c360-rail-item.is-active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 2px;
+    height: 20px;
+    background: var(--c360-accent);
+    border-radius: 0 2px 2px 0;
+}
+
+.c360-rail-item { position: relative; }
+.c360-rail-item:disabled { opacity: 0.35; cursor: default; }
+
+.c360-rail-icon {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    flex: none;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.c360-rail-label {
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.c360-rail:hover .c360-rail-label,
+.c360-rail:focus-within .c360-rail-label { opacity: 1; }
+
+.c360-rail-spacer { flex: 1 1 auto; }
+
+/* ---- workspace column -------------------------------------------- */
+
+.c360-shell {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 40px;
+}
+
+/* ---- command header ---------------------------------------------- */
+
+.c360-cmdhead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 22px 12px;
+    background: rgba(8, 11, 16, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-cmd-eyebrow {
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-cmd-title {
+    margin-top: 3px;
+    font-size: 20px;
+    font-weight: 680;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.1;
+}
+
+.c360-cmd-sub {
+    margin-top: 1px;
+    font-size: 12px;
+    color: var(--c360-text-muted);
+}
+
+.c360-cmd-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.c360-cmd-clock {
+    text-align: right;
+    line-height: 1.3;
+}
+
+.c360-cmd-time {
+    display: block;
+    font-family: var(--c360-mono);
+    font-size: 15px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--c360-text);
+}
+
+.c360-cmd-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-livedot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--c360-good);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+}
+
+.c360-livedot--syncing {
+    background: var(--c360-watch);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+/* ---- header search ------------------------------------------------ */
+
+.c360-cmdhead .c360-search { position: relative; width: 232px; }
+
+.c360-search-input {
+    width: 100%;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--c360-text);
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 5px;
+}
+
+.c360-search-input::placeholder { color: var(--c360-text-faint); }
+
+.c360-search-input:focus {
+    outline: none;
+    border-color: var(--c360-accent);
+    background: var(--c360-surface-raised);
+}
+
+.c360-search-results {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    z-index: 40;
+    width: 340px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 5px;
+    background: var(--c360-surface-raised);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: var(--c360-radius);
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.6);
+}
+
+.c360-result {
+    display: block;
+    width: 100%;
+    padding: 7px 9px;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.c360-result:hover { background: var(--c360-accent-soft); }
+.c360-result--note { color: var(--c360-text-faint); font-size: 12px; }
+.c360-result-name { display: block; font-weight: 600; font-size: 12px; }
+
+.c360-result-industry,
+.c360-result-why {
+    display: block;
+    margin-top: 1px;
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+/* ---- button variants for the dark shell -------------------------- */
+
+.c360-button {
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.c360-button--quiet {
+    color: var(--c360-text-muted);
+    background: var(--c360-surface-alt);
+    border-color: var(--c360-border-strong);
+}
+
+.c360-button--quiet:hover:not(:disabled) {
+    color: var(--c360-text);
+    background: var(--c360-surface-raised);
+    border-color: var(--c360-accent);
+}
+
+.c360-button--ai {
+    color: #E9D5FF;
+    background: var(--c360-ai-bg);
+    border-color: var(--c360-ai-line);
+}
+
+.c360-button--ai:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.24);
+    border-color: var(--c360-ai);
+}
+
+.c360-button--ghost {
+    color: var(--c360-text-muted);
+    background: transparent;
+    border-color: var(--c360-border-strong);
+}
+
+.c360-button--ghost:hover:not(:disabled) {
+    color: var(--c360-text);
+    background: var(--c360-surface-alt);
+}
+
+/* ================================================================== */
+/* PORTFOLIO STATUS STRIP                                             */
+/* ================================================================== */
+/*
+ * One row, monospace numbers, hairline dividers. Five figures the team reads
+ * before anything else. Not five KPI cards — cards would take four times the
+ * vertical space to say the same thing and push the actual work below the fold.
+ */
+
+.c360-strip {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: wrap;
+    padding: 0 22px;
+    background: var(--c360-surface);
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-strip-item {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 10px 20px 10px 0;
+    margin-right: 20px;
+    border-right: 1px solid var(--c360-border);
+}
+
+.c360-strip-item:last-child { border-right: 0; margin-right: 0; }
+
+.c360-strip-value {
+    font-family: var(--c360-mono);
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.c360-strip-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+    white-space: nowrap;
+}
+
+.c360-strip-item--critical .c360-strip-value { color: var(--c360-bad); }
+.c360-strip-item--warning .c360-strip-value { color: var(--c360-watch); }
+.c360-strip-item--good .c360-strip-value { color: var(--c360-good); }
+
+.c360-strip-note {
+    align-self: center;
+    margin-left: auto;
+    padding: 10px 0;
+    font-size: 10px;
+    color: var(--c360-text-faint);
+}
+
+/* ================================================================== */
+/* THREE-PANEL COMMAND WORKSPACE                                      */
+/* ================================================================== */
+/*
+ * The centrepiece, and the answer to the five questions in order:
+ *
+ *   WHO?         left panel   — the priority queue
+ *   HOW URGENT?  centre       — level, score, health, ARR, renewal
+ *   WHY?         right panel  — evidence and the score breakdown
+ *   WHAT?        centre       — next best action
+ *   DO IT        centre       — the buttons on that action
+ *
+ * Left is narrow and scrollable because it is a queue you scan. Centre is
+ * widest because it holds the decision and the action. Right is reference.
+ */
+
+.c360-cc {
+    display: grid;
+    grid-template-columns: minmax(268px, 0.9fr) minmax(0, 1.5fr) minmax(280px, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 12px 22px 0;
+}
+
+.c360-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.c360-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px 9px;
+    border-bottom: 1px solid var(--c360-border);
+    background: var(--c360-surface-alt);
+}
+
+.c360-panel-title {
+    font-family: var(--c360-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--c360-text-muted);
+}
+
+.c360-panel-meta {
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--c360-text-faint);
+}
+
+.c360-panel-sub {
+    padding: 8px 14px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-panel-body { padding: 12px 14px 14px; }
+.c360-panel-body--flush { padding: 0; }
+
+.c360-panel-scroll {
+    max-height: 560px;
+    overflow-y: auto;
+}
+
+/* ---- LEFT: priority queue ---------------------------------------- */
+
+.c360-qcount {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-qcount-item {
+    flex: 1 1 0;
+    padding: 9px 14px;
+    border-right: 1px solid var(--c360-border);
+}
+
+.c360-qcount-item:last-child { border-right: 0; }
+
+.c360-qcount-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    color: var(--c360-text-faint);
+}
+
+.c360-qcount-value {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--c360-mono);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.c360-queue { list-style: none; }
+
+/*
+ * A queue row, not a card. 2px left border for state, a dot beside the literal
+ * level, and enough room for the reason and the SLA readout — nothing more.
+ * Cards here would fit four accounts on screen instead of twelve.
+ */
+.c360-qrow {
+    display: block;
+    width: 100%;
+    padding: 10px 13px 10px 11px;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-bottom: 1px solid var(--c360-border);
+    cursor: pointer;
+    transition: background 150ms ease, border-left-color 150ms ease;
+}
+
+.c360-qrow:hover { background: var(--c360-surface-alt); }
+
+.c360-qrow.is-selected {
+    background: var(--c360-accent-wash);
+    border-left-color: var(--c360-accent);
+}
+
+.c360-qrow--P0 { border-left-color: rgba(239, 68, 68, 0.42); }
+.c360-qrow--P1 { border-left-color: rgba(245, 158, 11, 0.38); }
+
+.c360-qrow--P0.is-selected,
+.c360-qrow--P1.is-selected { border-left-color: var(--c360-accent); }
+
+.c360-qrow-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.c360-qrow-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 620;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.c360-qrow-reason {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--c360-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.c360-qrow-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+}
+
+.c360-tag {
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-tag--sla { color: var(--c360-bad); }
+.c360-tag--renewal { color: var(--c360-watch); }
+.c360-tag--arr { color: var(--c360-text-muted); }
+
+/* The priority readout: dot, level, score. Always all three. */
+.c360-plevel {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    font-family: var(--c360-mono);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.c360-plevel--P0 { color: var(--c360-p0); }
+.c360-plevel--P1 { color: var(--c360-p1); }
+.c360-plevel--P2 { color: var(--c360-p2); }
+.c360-plevel--P3 { color: var(--c360-p3); }
+
+.c360-pdot {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/*
+ * Only P0 pulses, and gently. Every dot pulsing is a screen that reads as
+ * broken; one dot pulsing is a screen that reads as urgent.
+ */
+.c360-plevel--P0 .c360-pdot {
+    animation: c360-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes c360-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42); }
+    50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+}
+
+/* ---- CENTRE: active account -------------------------------------- */
+
+.c360-active-head {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-active-name {
+    font-size: 19px;
+    font-weight: 680;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    line-height: 1.15;
+}
+
+.c360-active-tags {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-top: 7px;
+}
+
+.c360-band {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.c360-band--good { color: var(--c360-good); }
+.c360-band--watch { color: var(--c360-watch); }
+.c360-band--bad { color: var(--c360-bad); }
+.c360-band--muted { color: var(--c360-text-faint); }
+
+/* The three headline figures. Big mono numbers, tiny labels beneath. */
+.c360-figs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-fig {
+    padding: 13px 16px;
+    border-right: 1px solid var(--c360-border);
+}
+
+.c360-fig:last-child { border-right: 0; }
+
+.c360-fig-value {
+    display: block;
+    font-family: var(--c360-mono);
+    font-size: 30px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.c360-fig-value--bad { color: var(--c360-bad); }
+.c360-fig-value--watch { color: var(--c360-watch); }
+.c360-fig-value--good { color: var(--c360-good); }
+.c360-fig-value--muted { color: var(--c360-text-faint); font-size: 15px; }
+
+.c360-fig-label {
+    display: block;
+    margin-top: 5px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-fig-note {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    color: var(--c360-text-faint);
+}
+
+/* Secondary facts: ARR, segment, lifecycle, confidence. */
+.c360-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 1px;
+    background: var(--c360-border);
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-fact { padding: 9px 16px; background: var(--c360-surface); }
+
+.c360-fact-label {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-fact-value {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--c360-mono);
+    font-size: 13px;
+    font-weight: 550;
+    font-variant-numeric: tabular-nums;
+}
+
+.c360-fact-value--text {
+    font-family: var(--c360-font);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.c360-fact-value--missing {
+    color: var(--c360-text-faint);
+    font-style: italic;
+    font-family: var(--c360-font);
+    font-size: 11px;
+}
+
+/* ---- health trend ------------------------------------------------- */
+
+.c360-trend { padding: 12px 16px; border-bottom: 1px solid var(--c360-border); }
+
+.c360-trend-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.c360-trend-title {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-trend-delta {
+    font-family: var(--c360-mono);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.c360-trend-delta--up { color: var(--c360-good); }
+.c360-trend-delta--down { color: var(--c360-bad); }
+.c360-trend-delta--flat { color: var(--c360-text-faint); }
+
+.c360-spark { display: block; width: 100%; height: 62px; }
+.c360-spark-line { fill: none; stroke: var(--c360-accent); stroke-width: 1.5; }
+.c360-spark-area { fill: url(#c360-sparkfill); stroke: none; }
+.c360-spark-grid { stroke: var(--c360-border); stroke-width: 1; }
+.c360-spark-dot { fill: var(--c360-accent); }
+
+.c360-spark-axis {
+    font-family: var(--c360-mono);
+    font-size: 8px;
+    fill: var(--c360-text-faint);
+}
+
+/*
+ * The empty state for a trend with fewer than two stored runs. It exists
+ * because the alternative — inventing a previous score so the sparkline has
+ * something to draw — is the single most tempting dishonest thing this
+ * interface could do.
+ */
+.c360-trend-empty {
+    padding: 12px 13px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--c360-text-faint);
+    background: var(--c360-surface-alt);
+    border: 1px dashed var(--c360-border-strong);
+    border-radius: 5px;
+}
+
+/* ================================================================== */
+/* NEXT BEST ACTION                                                   */
+/* ================================================================== */
+/*
+ * The strongest element on the page, and deliberately the only one with a
+ * visible glow. Everything above it is diagnosis; this is the thing the user
+ * is here to do, so it gets the accent border, the largest non-numeric type,
+ * and the buttons.
+ */
+
+.c360-nba {
+    position: relative;
+    margin: 12px 14px 14px;
+    padding: 15px 17px 16px;
+    background:
+        linear-gradient(180deg, rgba(59, 130, 246, 0.07), rgba(59, 130, 246, 0.015)),
+        var(--c360-surface-raised);
+    border: 1px solid var(--c360-accent-line);
+    border-left: 2px solid var(--c360-accent);
+    border-radius: 7px;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.06), 0 10px 28px rgba(0, 0, 0, 0.34);
+}
+
+.c360-nba-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--c360-accent);
+}
+
+.c360-nba-headline {
+    margin-top: 8px;
+    font-size: 17px;
+    font-weight: 680;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.c360-nba-why {
+    margin-top: 8px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--c360-text-muted);
+}
+
+.c360-nba-steps {
+    margin-top: 11px;
+    padding-left: 0;
+    list-style: none;
+    counter-reset: c360nba;
+}
+
+.c360-nba-steps li {
+    position: relative;
+    padding: 4px 0 4px 26px;
+    font-size: 12px;
+    counter-increment: c360nba;
+}
+
+.c360-nba-steps li::before {
+    content: counter(c360nba);
+    position: absolute;
+    left: 0;
+    top: 4px;
+    display: grid;
+    place-items: center;
+    width: 17px;
+    height: 17px;
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--c360-accent);
+    background: var(--c360-accent-soft);
+    border-radius: 3px;
+}
+
+.c360-nba-meta {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 11px;
+    border-top: 1px solid var(--c360-border);
+}
+
+.c360-nba-meta-item {
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-nba-meta-value {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--c360-mono);
+    font-size: 12px;
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c360-text);
+}
+
+.c360-nba-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 13px;
+}
+
+.c360-button--action {
+    color: var(--c360-on-accent);
+    background: var(--c360-accent);
+    border-color: var(--c360-accent);
+}
+
+.c360-button--action:hover:not(:disabled) { background: var(--c360-accent-hover); }
+
+/* The honest empty state: no action, and no generic one invented. */
+.c360-nba--quiet {
+    background: var(--c360-surface-alt);
+    border-color: var(--c360-border-strong);
+    border-left-color: var(--c360-good);
+    box-shadow: none;
+}
+
+.c360-nba--quiet .c360-nba-eyebrow { color: var(--c360-good); }
+
+/* ---- RIGHT: intelligence ----------------------------------------- */
+
+.c360-eviList { list-style: none; }
+
+/*
+ * Numbered evidence. The ordinal matters: the panel is answering "why?" and a
+ * numbered list reads as a chain of reasoning rather than a bag of facts.
+ */
+.c360-evi {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-evi:last-child { border-bottom: 0; }
+
+.c360-evi-ord {
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--c360-text-faint);
+    padding-top: 1px;
+}
+
+.c360-evi-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.c360-evi-title--critical { color: var(--c360-bad); }
+.c360-evi-title--warning { color: var(--c360-watch); }
+.c360-evi-title--info { color: var(--c360-text); }
+
+.c360-evi-text {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--c360-text-muted);
+}
+
+.c360-evi-quote {
+    margin: 5px 0 0;
+    padding: 6px 9px;
+    font-size: 11px;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--c360-text-muted);
+    background: var(--c360-surface-alt);
+    border-left: 2px solid var(--c360-border-strong);
+    border-radius: 0 3px 3px 0;
+}
+
+.c360-evi-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+}
+
+/* ---- factor bars -------------------------------------------------- */
+/*
+ * The priority score, decomposed. Each bar is the factor's CONTRIBUTION, so
+ * the bars sum to the total shown underneath — the arithmetic is the point,
+ * not the decoration.
+ */
+
+.c360-bars { margin-top: 4px; }
+
+.c360-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 46px;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+}
+
+.c360-bar-label {
+    font-size: 11px;
+    color: var(--c360-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.c360-bar-track {
+    grid-column: 1 / -1;
+    height: 4px;
+    background: var(--c360-surface-alt);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.c360-bar-fill {
+    height: 100%;
+    background: var(--c360-accent);
+    border-radius: 2px;
+    transition: width 260ms ease;
+}
+
+.c360-bar-fill--bad { background: var(--c360-bad); }
+.c360-bar-fill--watch { background: var(--c360-watch); }
+.c360-bar-fill--good { background: var(--c360-good); }
+
+.c360-bar-value {
+    font-family: var(--c360-mono);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.c360-bar--unavailable .c360-bar-label,
+.c360-bar--unavailable .c360-bar-value {
+    color: var(--c360-text-faint);
+    font-style: italic;
+}
+
+.c360-bar-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid var(--c360-border-strong);
+}
+
+.c360-bar-total-label {
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c360-text-muted);
+}
+
+.c360-bar-total-value {
+    font-family: var(--c360-mono);
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================== */
+/* ACTION QUEUE TABS                                                  */
+/* ================================================================== */
+/*
+ * Four filters, not four KPI cards. Clicking one narrows the portfolio, and
+ * the active one says so with a border and aria-pressed rather than only a
+ * colour change.
+ */
+
+.c360-queues {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    padding: 0 22px;
+    margin-top: 14px;
+}
+
+.c360-qtab {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 14px;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-left: 2px solid var(--c360-border-strong);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.c360-qtab:hover { background: var(--c360-surface-alt); }
+
+.c360-qtab-count {
+    font-family: var(--c360-mono);
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.c360-qtab-name {
+    display: block;
+    font-family: var(--c360-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+}
+
+.c360-qtab-desc {
+    display: block;
+    margin-top: 2px;
+    font-size: 10.5px;
+    color: var(--c360-text-faint);
+}
+
+.c360-qtab--save { border-left-color: var(--c360-bad); }
+.c360-qtab--save .c360-qtab-count { color: var(--c360-bad); }
+.c360-qtab--fix { border-left-color: var(--c360-watch); }
+.c360-qtab--fix .c360-qtab-count { color: var(--c360-watch); }
+.c360-qtab--grow { border-left-color: var(--c360-good); }
+.c360-qtab--grow .c360-qtab-count { color: var(--c360-good); }
+.c360-qtab--engage { border-left-color: var(--c360-accent); }
+.c360-qtab--engage .c360-qtab-count { color: var(--c360-accent); }
+
+.c360-qtab.is-active {
+    background: var(--c360-surface-raised);
+    border-color: var(--c360-accent);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18);
+}
+
+.c360-qtab.is-active .c360-qtab-name::after {
+    content: " · FILTERED";
+    color: var(--c360-accent);
+    letter-spacing: 0.08em;
+}
+
+/* ================================================================== */
+/* PORTFOLIO MATRIX                                                   */
+/* ================================================================== */
+/*
+ * Health on x, priority on y. The quadrant that matters is top-left: urgent
+ * AND unhealthy. Top-right is the interesting one — urgent but healthy, which
+ * is exactly the case a single blended score would hide, and the whole reason
+ * health and priority are kept apart.
+ */
+
+.c360-matrix-wrap { padding: 12px 14px 14px; }
+
+.c360-matrix {
+    position: relative;
+    height: 320px;
+    margin-left: 30px;
+    background:
+        linear-gradient(90deg, rgba(239, 68, 68, 0.045), transparent 52%),
+        var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Quadrant guides at 4% — present enough to read a position against. */
+.c360-matrix::before,
+.c360-matrix::after {
+    content: "";
+    position: absolute;
+    background: rgba(148, 163, 184, 0.11);
+}
+
+.c360-matrix::before { left: 0; right: 0; top: 50%; height: 1px; }
+.c360-matrix::after { top: 0; bottom: 0; left: 50%; width: 1px; }
+
+.c360-mnode {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    transform: translate(-50%, 50%);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 160ms ease;
+}
+
+.c360-mnode::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 2px rgba(8, 11, 16, 0.85);
+    transition: width 160ms ease, height 160ms ease;
+}
+
+.c360-mnode:hover { transform: translate(-50%, 50%) scale(1.35); z-index: 6; }
+.c360-mnode:hover::before { box-shadow: 0 0 0 3px rgba(8, 11, 16, 0.9); }
+
+.c360-mnode.is-selected { z-index: 7; }
+.c360-mnode.is-selected::before {
+    width: 12px;
+    height: 12px;
+    box-shadow: 0 0 0 2px var(--c360-bg), 0 0 0 4px currentColor;
+}
+
+.c360-mnode--P0 { color: var(--c360-p0); }
+.c360-mnode--P1 { color: var(--c360-p1); }
+.c360-mnode--P2 { color: var(--c360-p2); }
+.c360-mnode--P3 { color: var(--c360-p3); }
+
+/* Hover readout, positioned by the node. Pure CSS, no JS positioning. */
+.c360-mtip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 9px);
+    z-index: 12;
+    width: 178px;
+    padding: 9px 11px;
+    transform: translateX(-50%);
+    text-align: left;
+    background: var(--c360-surface-raised);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 6px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.66);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+}
+
+.c360-mnode:hover .c360-mtip,
+.c360-mnode:focus-visible .c360-mtip { opacity: 1; }
+
+.c360-mtip-name {
+    display: block;
+    font-size: 11px;
+    font-weight: 650;
+    text-transform: uppercase;
+    color: var(--c360-text);
+}
+
+.c360-mtip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 3px;
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    color: var(--c360-text-muted);
+}
+
+.c360-mtip-row span:first-child {
+    letter-spacing: 0.07em;
+    color: var(--c360-text-faint);
+}
+
+/* Axis furniture */
+.c360-maxis-y {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.c360-maxis-x {
+    display: flex;
+    justify-content: space-between;
+    margin: 7px 0 0 30px;
+}
+
+.c360-maxis-label {
+    font-family: var(--c360-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-maxis-name {
+    margin-top: 9px;
+    font-family: var(--c360-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--c360-text-muted);
+}
+
+.c360-matrix-unplaced {
+    margin-top: 11px;
+    padding: 9px 11px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--c360-text-faint);
+    background: var(--c360-surface-alt);
+    border: 1px dashed var(--c360-border-strong);
+    border-radius: 5px;
+}
+
+/* ================================================================== */
+/* SIGNAL FEED                                                        */
+/* ================================================================== */
+
+.c360-feed { list-style: none; }
+
+.c360-feed-item {
+    display: grid;
+    grid-template-columns: 46px 12px minmax(0, 1fr);
+    gap: 9px;
+    align-items: baseline;
+    width: 100%;
+    padding: 7px 14px;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--c360-border);
+    cursor: pointer;
+}
+
+.c360-feed-item:hover { background: var(--c360-surface-alt); }
+
+.c360-feed-time {
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--c360-text-faint);
+}
+
+.c360-feed-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    justify-self: center;
+    transform: translateY(-2px);
+}
+
+.c360-feed-dot--critical { background: var(--c360-bad); }
+.c360-feed-dot--warning { background: var(--c360-watch); }
+.c360-feed-dot--healthy { background: var(--c360-good); }
+.c360-feed-dot--info { background: var(--c360-accent); }
+
+.c360-feed-text { font-size: 11.5px; min-width: 0; }
+
+.c360-feed-account {
+    font-weight: 620;
+    color: var(--c360-text);
+}
+
+.c360-feed-what { color: var(--c360-text-muted); }
+
+/* ================================================================== */
+/* ACCOUNT DETAIL WORKSPACE                                           */
+/* ================================================================== */
+
+.c360-aw { padding: 14px 22px 0; }
+
+.c360-aw-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 9px 5px 6px;
+    font: inherit;
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--c360-text-muted);
+    background: transparent;
+    border: 1px solid var(--c360-border);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.c360-aw-back:hover { color: var(--c360-text); border-color: var(--c360-accent); }
+
+.c360-aw-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-aw-name {
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    text-transform: uppercase;
+    line-height: 1.08;
+}
+
+.c360-aw-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-family: var(--c360-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-aw-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+    gap: 12px;
+    align-items: start;
+    margin-top: 14px;
+}
+
+.c360-aw-split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.c360-siglist { list-style: none; }
+
+.c360-sig {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-sig:last-child { border-bottom: 0; }
+
+.c360-sig-dot {
+    width: 7px;
+    height: 7px;
+    margin-top: 5px;
+    border-radius: 50%;
+    justify-self: center;
+}
+
+.c360-sig-dot--critical { background: var(--c360-bad); }
+.c360-sig-dot--warning { background: var(--c360-watch); }
+.c360-sig-dot--healthy { background: var(--c360-good); }
+.c360-sig-dot--info { background: var(--c360-accent); }
+
+.c360-sig-name { font-size: 12px; font-weight: 600; }
+
+.c360-sig-meta {
+    margin-top: 2px;
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+}
+
+/* Activity: a real timeline with a rule down the left. */
+.c360-acts { list-style: none; padding-left: 13px; }
+
+.c360-act {
+    position: relative;
+    padding: 8px 0 8px 15px;
+    border-left: 1px solid var(--c360-border);
+}
+
+.c360-act:last-child { border-left-color: transparent; }
+
+.c360-act::before {
+    content: "";
+    position: absolute;
+    left: -3.5px;
+    top: 13px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--c360-border-strong);
+}
+
+.c360-act--critical::before { background: var(--c360-bad); }
+.c360-act--warning::before { background: var(--c360-watch); }
+.c360-act--healthy::before { background: var(--c360-good); }
+
+.c360-act-date {
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-act-text { margin-top: 2px; font-size: 11.5px; }
+
+/* ================================================================== */
+/* BRIEF MODAL                                                        */
+/* ================================================================== */
+
+.c360-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: grid;
+    place-items: start center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    background: rgba(4, 6, 10, 0.76);
+    backdrop-filter: blur(3px);
+}
+
+.c360-modal {
+    width: 100%;
+    max-width: 720px;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 10px;
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.72);
+}
+
+.c360-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-modal-eyebrow {
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-modal-title {
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: 680;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+}
+
+.c360-modal-close {
+    flex: none;
+    width: 27px;
+    height: 27px;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--c360-text-muted);
+    background: transparent;
+    border: 1px solid var(--c360-border);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.c360-modal-close:hover { color: var(--c360-text); border-color: var(--c360-accent); }
+
+.c360-modal-body { padding: 4px 20px 18px; }
+
+.c360-modal-foot {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 13px 20px 16px;
+    border-top: 1px solid var(--c360-border);
+}
+
+.c360-bs { margin-top: 17px; }
+
+.c360-bs-title {
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--c360-accent);
+}
+
+.c360-bs-body {
+    margin-top: 7px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--c360-text-muted);
+}
+
+.c360-bs-body p + p { margin-top: 7px; }
+
+.c360-bs-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    gap: 1px;
+    margin-top: 9px;
+    background: var(--c360-border);
+    border: 1px solid var(--c360-border);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.c360-bs-fact { padding: 8px 11px; background: var(--c360-surface-alt); }
+
+.c360-bs-list { margin-top: 8px; list-style: none; }
+
+.c360-bs-list > li {
+    position: relative;
+    padding: 5px 0 5px 15px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--c360-text-muted);
+}
+
+.c360-bs-list > li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 12px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--c360-text-faint);
+}
+
+.c360-bs-quote {
+    margin: 5px 0 0;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.55;
+    color: var(--c360-text);
+    background: var(--c360-surface-alt);
+    border-left: 2px solid var(--c360-border-strong);
+    border-radius: 0 4px 4px 0;
+}
+
+.c360-bs-source {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    color: var(--c360-text-faint);
+}
+
+.c360-bs-empty {
+    margin-top: 8px;
+    padding: 9px 11px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    font-style: italic;
+    color: var(--c360-text-faint);
+    background: var(--c360-surface-alt);
+    border: 1px dashed var(--c360-border-strong);
+    border-radius: 5px;
+}
+
+/* ================================================================== */
+/* PORTFOLIO AI DRAWER                                                */
+/* ================================================================== */
+/*
+ * A right-side drawer, never a takeover. The dashboard stays visible and
+ * usable behind it, because the answers are ABOUT what is on the dashboard —
+ * covering it up would make the panel harder to act on, not easier.
+ */
+
+.c360-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    width: 404px;
+    max-width: 92vw;
+    background: var(--c360-surface);
+    border-left: 1px solid var(--c360-border-strong);
+    box-shadow: -22px 0 60px rgba(0, 0, 0, 0.62);
+    animation: c360-slidein 220ms ease;
+}
+
+@keyframes c360-slidein {
+    from { transform: translateX(22px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+
+.c360-drawer-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 17px 13px;
+    border-bottom: 1px solid var(--c360-border);
+}
+
+.c360-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--c360-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--c360-ai);
+}
+
+.c360-drawer-note {
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--c360-text-faint);
+}
+
+.c360-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 14px 17px;
+}
+
+.c360-drawer-foot {
+    padding: 12px 17px 15px;
+    border-top: 1px solid var(--c360-border);
+    background: var(--c360-surface-alt);
+}
+
+.c360-ask {
+    display: flex;
+    gap: 7px;
+}
+
+.c360-ask-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 8px 11px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--c360-text);
+    background: var(--c360-surface-raised);
+    border: 1px solid var(--c360-border-strong);
+    border-radius: 5px;
+}
+
+.c360-ask-input:focus { outline: none; border-color: var(--c360-ai); }
+.c360-ask-input::placeholder { color: var(--c360-text-faint); }
+
+.c360-sugs { list-style: none; }
+.c360-sugs > li + li { margin-top: 6px; }
+
+.c360-sug {
+    display: block;
+    width: 100%;
+    padding: 9px 11px;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    color: var(--c360-text-muted);
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.c360-sug:hover {
+    color: var(--c360-text);
+    border-color: var(--c360-ai-line);
+    background: var(--c360-ai-bg);
+}
+
+.c360-answer {
+    padding: 13px 14px;
+    background: var(--c360-surface-alt);
+    border: 1px solid var(--c360-border);
+    border-left: 2px solid var(--c360-ai);
+    border-radius: 6px;
+}
+
+.c360-answer-q {
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--c360-text-faint);
+}
+
+.c360-answer-headline {
+    margin-top: 6px;
+    font-size: 13.5px;
+    font-weight: 620;
+    line-height: 1.45;
+}
+
+.c360-answer-detail {
+    margin-top: 9px;
+    list-style: none;
+}
+
+.c360-answer-detail > li {
+    padding: 4px 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--c360-text-muted);
+}
+
+/*
+ * How the answer was arrived at. Always shown — an answer about who to call
+ * this morning has to be auditable, and "here is the query I ran" is what
+ * makes it so.
+ */
+.c360-answer-method {
+    margin-top: 11px;
+    padding-top: 9px;
+    font-size: 10.5px;
+    line-height: 1.55;
+    color: var(--c360-text-faint);
+    border-top: 1px solid var(--c360-border);
+}
+
+.c360-answer-accounts { margin-top: 11px; list-style: none; }
+
+.c360-aref {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 7px 9px;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: var(--c360-surface);
+    border: 1px solid var(--c360-border);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.c360-answer-accounts > li + li { margin-top: 5px; }
+.c360-aref:hover { border-color: var(--c360-accent); }
+
+.c360-aref-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.c360-aref-note {
+    display: block;
+    margin-top: 1px;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--c360-text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ================================================================== */
+/* SHARED SMALL PARTS                                                 */
+/* ================================================================== */
+
+.c360-empty-panel {
+    padding: 22px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+    color: var(--c360-text-faint);
+}
+
+.c360-chip {
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.c360-qbadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    font-family: var(--c360-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    border-radius: 3px;
+}
+
+.c360-qbadge--save { color: var(--c360-bad); background: var(--c360-bad-bg); }
+.c360-qbadge--fix { color: var(--c360-watch); background: var(--c360-watch-bg); }
+.c360-qbadge--grow { color: var(--c360-good); background: var(--c360-good-bg); }
+.c360-qbadge--engage { color: var(--c360-accent); background: var(--c360-accent-soft); }
+.c360-qbadge--none { color: var(--c360-text-faint); background: var(--c360-neutral-bg); }
+
+/* The mock banner stays the loudest thing on the page. */
+.c360-mock-banner {
+    padding: 8px 22px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    background: var(--c360-mock-bg);
+    border-bottom: 1px solid var(--c360-mock);
+    color: var(--c360-mock);
+}
+
+/* Legacy dashboard sections, re-fitted to the dark shell. */
+.c360-content { max-width: none; padding: 0 22px; }
+.c360-scorecard-block { max-width: none; padding: 0 22px; }
+.c360-portfolio { max-width: none; padding: 0; }
+.c360-account-header,
+.c360-source-status,
+.c360-toolbar { padding-left: 22px; padding-right: 22px; }
+
+.c360-footer {
+    max-width: none;
+    padding: 18px 22px 0;
+    margin-top: 22px;
+    border-top: 1px solid var(--c360-border);
+    font-size: 11px;
+    color: var(--c360-text-faint);
+}
+
+/* ================================================================== */
+/* RESPONSIVE                                                         */
+/* ================================================================== */
+/*
+ * The three-panel workspace is designed for 1440px. Below 1280 the
+ * intelligence panel drops under the pair; below 1000 all three stack. The
+ * ORDER is preserved on every step — who, then how urgent, then why — because
+ * that order is the product.
+ */
+
+@media (max-width: 1280px) {
+    .c360-cc {
+        grid-template-columns: minmax(250px, 0.85fr) minmax(0, 1.6fr);
+    }
+    .c360-cc > .c360-panel--intel { grid-column: 1 / -1; }
+    .c360-aw-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 1000px) {
+    .c360-cc { grid-template-columns: minmax(0, 1fr); }
+    .c360-panel-scroll { max-height: 380px; }
+}
+
+@media (max-width: 720px) {
+    .c360-rail { position: fixed; height: 100vh; }
+    .c360-shell { padding-left: var(--c360-rail); }
+    .c360-cmdhead { padding: 12px 14px; }
+    .c360-cc, .c360-queues, .c360-aw { padding-left: 14px; padding-right: 14px; }
+    .c360-strip { padding: 0 14px; }
+    .c360-content, .c360-scorecard-block { padding: 0 14px; }
+    .c360-figs { grid-template-columns: minmax(0, 1fr); }
+    .c360-fig { border-right: 0; border-bottom: 1px solid var(--c360-border); }
+    .c360-cmdhead .c360-search { width: 100%; }
+    .c360-search-results { width: 100%; }
+    .c360-drawer { width: 100%; }
+}
+
+/*
+ * Respect a user's reduced-motion preference. This matters now that the
+ * interface actually animates — the P0 pulse, the rail expansion, the drawer
+ * slide and the bar fills all stop here. The `!important` is deliberate: a
+ * later rule must not be able to reintroduce motion for someone who asked for
+ * none.
+ */
 @media (prefers-reduced-motion: reduce) {
     #c360-app * { transition: none !important; animation: none !important; }
 }

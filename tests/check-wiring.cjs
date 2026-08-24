@@ -85,9 +85,25 @@ while ((match = idRe.exec(html)) !== null) {
     htmlIds.add(match[1]);
 }
 
-// Ids created at render time by the app itself, not present in the static
-// HTML. Listed explicitly so a genuine typo still fails this check.
-const RUNTIME_IDS = new Set(["c360-refresh", "c360-retry"]);
+/*
+ * Ids created at render time rather than sitting in the static HTML.
+ *
+ * Listed explicitly, and each one is verified below to be produced by some
+ * script — so a genuine typo still fails this check, but the header, the
+ * clock, the brief and the AI drawer are allowed to be rendered by their own
+ * templates rather than being pre-declared in index.html.
+ */
+const RUNTIME_IDS = new Set([
+    "c360-retry",
+    // Rendered by js/ui/shell.js — the header owns the search combobox and the
+    // clock, so they move with it.
+    "c360-search",
+    "c360-search-results",
+    "c360-clock",
+    // Rendered by js/ui/portfolioAi.js and js/ui/brief.js.
+    "c360-ai-input",
+    "c360-brief-status"
+]);
 
 scriptSrcs.forEach((src) => {
     const code = fs.readFileSync(path.join(ROOT, src), "utf8");

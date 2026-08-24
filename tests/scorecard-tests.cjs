@@ -72,7 +72,15 @@ module.exports = function (harness) {
     function baseline(over) {
         const o = over || {};
         const account = N.account(Object.assign({
-            id: o.id || "sc-1", name: "Baseline Freight Inc.", domain: "baselinefreight.example",
+            id: o.id || "sc-1",
+            /*
+             * A distinct name per fixture. Identical names made the
+             * name-matching query ambiguous, which the query layer now reports
+             * rather than guesses — correct behaviour, but it meant every
+             * fixture collided with every other one.
+             */
+            name: o.name || ((o.id || "sc-1") + " Freight Inc."),
+            domain: "baselinefreight.example",
             status: "Active", customerSince: "2019-05-01", assetCount: 180,
             accountOwner: "Priya Raman", contactProfile: "fleet-heavy",
             products: ["Telematics Core", "Driver Safety Cameras", "Compliance / HOS",
@@ -1543,6 +1551,274 @@ module.exports = function (harness) {
         C360.feedback.byRule().length > 0);
     C360.scorecardConfig.version = originalVersion;
     C360.feedback.reset();
+
+    // =================================================================
+    // COMMAND CENTER — run history, brief, portfolio query
+    // =================================================================
+    // The redesign added three engines. Each one has a single property worth
+    // protecting, and each of those is a place the interface could quietly start
+    // lying to make itself look better.
+
+    // ---- history: a trend is only ever drawn from stored runs --------
+    C360.history.reset();
+
+    const trendModel = cancelled;
+    let trend = C360.history.trend(trendModel.accountId, "healthScore");
+    eq("CC.1 with no stored run, no trend is available", trend.available, false);
+    eq("CC.1 and no points are invented", trend.points.length, 0);
+    check("CC.1 and it says why", trend.reason.indexOf("No scoring run") !== -1);
+
+    C360.history.record(trendModel);
+    trend = C360.history.trend(trendModel.accountId, "healthScore");
+    eq("CC.2 with ONE stored run, a trend is still not available", trend.available, false);
+    eq("CC.2 the single real point is kept", trend.points.length, 1);
+    check("CC.2 and it says a second run is needed, rather than inventing one",
+        trend.reason.indexOf("second refresh") !== -1);
+
+    // A genuinely different run, at a different asOf.
+    C360.history.record(Object.assign({}, trendModel, {
+        asOf: "2026-08-25T12:00:00.000Z",
+        summary: Object.assign({}, trendModel.summary, {
+            healthScore: trendModel.summary.healthScore - 9
+        })
+    }));
+    trend = C360.history.trend(trendModel.accountId, "healthScore");
+    eq("CC.3 with two stored runs, a trend is available", trend.available, true);
+    eq("CC.3 built from both real points", trend.points.length, 2);
+    eq("CC.3 the direction is derived, not asserted", trend.direction, "down");
+    check("CC.3 the delta matches the stored values",
+        Math.round(trend.delta) === -9, String(trend.delta));
+
+    // Two records at the SAME asOf must collapse, or hitting Refresh twice in a
+    // minute manufactures movement that did not happen.
+    const before = C360.history.runsFor(trendModel.accountId).length;
+    C360.history.record(trendModel);
+    C360.history.record(trendModel);
+    eq("CC.4 repeated runs at the same asOf collapse rather than accumulating",
+        C360.history.runsFor(trendModel.accountId).length, before);
+
+    const changes = C360.history.changesFor(trendModel.accountId, trendModel);
+    check("CC.5 changes are reported against the previous stored run",
+        Array.isArray(changes));
+
+    C360.history.reset();
+    eq("CC.5 with history cleared, no change is reported",
+        C360.history.changesFor(trendModel.accountId, trendModel).length, 0);
+
+    // ---- portfolio row: ARR, renewal countdown, SLA, next action -----
+    const ccView = C360.portfolio.build(portfolioModels, {});
+    const ccRow = C360.portfolio.rowFor(ccView, cancelled.accountId);
+
+    check("CC.6 a row carries a renewal countdown in days",
+        ccRow.renewalDays === null || typeof ccRow.renewalDays === "number");
+    check("CC.6 a passed renewal is null rather than negative",
+        ccView.allRows.every((row) =>
+            row.renewalDays === null || row.renewalDays >= 0));
+    check("CC.7 a row carries its own next best action",
+        ccRow.nextAction !== null && !!ccRow.nextAction.label);
+    check("CC.7 the next action is the first recommendation, in queue precedence",
+        ccRow.nextAction.rule === cancelled.recommendations[0].rule);
+    check("CC.8 a row with no recommendation has no next action",
+        C360.portfolio.rowFor(ccView, healthyModel.accountId).nextAction === null);
+
+    const slaRow = C360.portfolio.rowFor(ccView, slaBreached.accountId);
+    check("CC.9 an SLA breach is surfaced with its age in days",
+        slaRow.slaBreach !== null && slaRow.slaBreach.days > 0);
+    check("CC.9 and names the ticket it came from", !!slaRow.slaBreach.ticketId);
+
+    // ---- ARR states its own coverage --------------------------------
+    check("CC.10 portfolio ARR reports how many accounts it covers",
+        typeof ccView.summary.arrKnownFor === "number");
+    check("CC.10 and whether that is all of them",
+        typeof ccView.summary.arrCoversAll === "boolean");
+    check("CC.10 ARR is null rather than 0 when no account records a value",
+        C360.portfolio.build([barelyAnything], {}).summary.arrTotal === null);
+
+    // ---- the urgent queue is P0/P1 only ------------------------------
+    check("CC.11 the priority queue holds only P0 and P1",
+        ccView.urgent.every((row) =>
+            row.priorityLevel === "P0" || row.priorityLevel === "P1"));
+    check("CC.11 ordered by priority score descending",
+        ccView.urgent.every((row, index) =>
+            index === 0 || ccView.urgent[index - 1].priorityScore >= row.priorityScore));
+
+    // ---- the matrix never plots an unscoreable account at zero -------
+    const matrix = ccView.matrix;
+    check("CC.12 an account with unavailable health is not plotted",
+        matrix.placed.every((node) => node.healthScore !== null));
+    check("CC.12 it is listed as unplaced instead, with a reason",
+        matrix.unplaced.every((item) => !!item.reason));
+    eq("CC.12 plotted plus unplaced equals the portfolio",
+        matrix.placed.length + matrix.unplaced.length, ccView.allRows.length);
+    check("CC.13 matrix coordinates are within bounds",
+        matrix.placed.every((node) =>
+            node.x >= 0 && node.x <= 100 && node.y >= 0 && node.y <= 100));
+
+    // ---- the signal feed uses record dates, not the run time ---------
+    const feed = ccView.feed;
+    check("CC.14 the feed is populated", feed.length > 0);
+    check("CC.14 every entry carries a real record date",
+        feed.every((item) => !!item.date));
+    check("CC.14 ordered newest first",
+        feed.every((item, index) =>
+            index === 0
+            || new Date(feed[index - 1].date) >= new Date(item.date)));
+    check("CC.14 every entry names the account and the record it came from",
+        feed.every((item) => !!item.accountName && !!item.recordType));
+
+    // ---- the brief --------------------------------------------------
+    const brief = C360.brief.build(cancelled, ccRow, { asOf: ASOF });
+
+    check("CC.15 the brief has all five sections",
+        !!brief.situation && !!brief.stakes && !!brief.concerns
+        && !!brief.approach && !!brief.openQuestions);
+    check("CC.15 the situation is drawn from the fired overrides",
+        brief.situation.paragraphs.length > 0);
+    check("CC.16 a missing stake reads as 'Not recorded' rather than being omitted",
+        brief.stakes.facts.every((fact) => !!fact.value));
+    check("CC.16 and each stake says whether it is actually known",
+        brief.stakes.facts.every((fact) => typeof fact.known === "boolean"));
+
+    check("CC.17 customer concerns are quoted from the record",
+        brief.concerns.items.length === 0
+        || brief.concerns.items.some((item) => item.quoted === true));
+    check("CC.17 every concern names its source",
+        brief.concerns.items.every((item) => !!item.source));
+
+    check("CC.18 the approach is the mapped steps, in order",
+        brief.approach.steps.length > 0);
+    check("CC.18 with an owner and a due date",
+        !!brief.approach.owner && !!brief.approach.due);
+
+    // The section that keeps the brief honest.
+    check("CC.19 open questions are always present",
+        brief.openQuestions.items.length > 0
+        || !!brief.openQuestions.emptyNote);
+    check("CC.19 a text-derived signal raises a question about itself",
+        brief.openQuestions.items.some((item) =>
+            item.indexOf("matching") !== -1 || item.indexOf("language") !== -1));
+
+    eq("CC.20 the brief is labelled composed, not generated",
+        brief.provenance, "derived");
+
+    const briefText = C360.brief.toText(brief);
+    check("CC.21 the copyable text carries every section",
+        briefText.indexOf("SITUATION") !== -1
+        && briefText.indexOf("WHY IT MATTERS") !== -1
+        && briefText.indexOf("CUSTOMER CONCERNS") !== -1
+        && briefText.indexOf("RECOMMENDED APPROACH") !== -1
+        && briefText.indexOf("OPEN QUESTIONS") !== -1);
+    check("CC.21 and is labelled sample data",
+        briefText.indexOf("Sample data") !== -1);
+
+    /*
+     * CC.22 — the brief must not assert anything its evidence does not carry.
+     * Same validator the drafts go through, applied to the composed document.
+     */
+    /*
+     * Validated against what the brief ITSELF puts on screen: its cited
+     * evidence, plus the stake values it prints in the "why it matters" block.
+     * That is the honest boundary — a reader can check every claim against
+     * something visible in the same document, without opening anything else.
+     */
+    const briefEvidence = C360.util.list(brief.situation.evidence)
+        .concat(cancelled.recommendations.reduce(
+            (all, rec) => all.concat(rec.evidence), []));
+    const briefContext = brief.stakes.facts.map((fact) => fact.value)
+        .concat(brief.concerns.items.map((item) => item.source))
+        .concat([cancelled.accountName, brief.level,
+                 C360.util.formatDateTime(brief.asOf),
+                 C360.util.formatDate(brief.asOf)]);
+
+    const briefClaims = C360.actionRules.validateClaims(
+        briefText, briefEvidence, null, briefContext);
+    check("CC.22 the brief asserts nothing it does not itself show",
+        briefClaims.valid,
+        briefClaims.unsupported.map((claim) => claim.value).join(", "));
+
+    // ---- the portfolio query ----------------------------------------
+    const suggestions = C360.portfolioQuery.suggestions();
+    check("CC.23 the query layer offers suggested questions", suggestions.length >= 5);
+    check("CC.23 each has a key and a label",
+        suggestions.every((item) => !!item.key && !!item.label));
+
+    const contactAnswer = C360.portfolioQuery.ask("Who should I contact today?", ccView);
+    eq("CC.24 a known question is matched", contactAnswer.matched, true);
+    check("CC.24 the answer has a headline", !!contactAnswer.headline);
+    check("CC.24 and shows how it was derived", !!contactAnswer.method);
+    check("CC.24 every account it names is real",
+        contactAnswer.accounts.every((ref) =>
+            ccView.allRows.some((row) => row.accountId === ref.accountId)));
+    check("CC.24 with its real scores",
+        contactAnswer.accounts.every((ref) => {
+            const row = ccView.allRows.filter(
+                (item) => item.accountId === ref.accountId)[0];
+            return row.priorityScore === ref.priorityScore;
+        }));
+
+    const riskAnswer = C360.portfolioQuery.ask("which customers are at highest risk",
+        ccView);
+    eq("CC.25 the risk question is matched", riskAnswer.matched, true);
+    check("CC.25 and answers from the SAVE queue, not from health",
+        riskAnswer.method.indexOf("SAVE") !== -1);
+
+    const whyAnswer = C360.portfolioQuery.ask(
+        "Why is " + cancelled.accountName + " P0?", ccView);
+    eq("CC.26 a question naming an account is answered about that account",
+        whyAnswer.accounts[0].accountId, cancelled.accountId);
+    check("CC.26 and states which mechanism set the level",
+        whyAnswer.headline.indexOf("override") !== -1
+        || whyAnswer.headline.indexOf("weighted score") !== -1);
+    check("CC.26 and reminds the reader health is separate",
+        whyAnswer.detail.some((line) =>
+            line.indexOf("calculated separately") !== -1
+            || line.indexOf("stands on its own") !== -1));
+
+    /*
+     * CC.27 — the behaviour a chat interface cannot have. An unmatched question
+     * must say so rather than produce a fluent answer to a question nobody
+     * asked.
+     */
+    // Two accounts sharing a name must be reported as ambiguous, not guessed at.
+    const twinView = C360.portfolio.build([
+        Object.assign({}, cancelled, { accountId: "twin-a", accountName: "Twin Haulage" }),
+        Object.assign({}, slaBreached, { accountId: "twin-b", accountName: "Twin Haulage" })
+    ], {});
+    const ambiguous = C360.portfolioQuery.ask("why is Twin Haulage a priority", twinView);
+    eq("CC.26b an ambiguous account name is not answered", ambiguous.matched, false);
+    eq("CC.26b it is reported as ambiguous", ambiguous.ambiguous, true);
+    eq("CC.26b and offers both candidates", ambiguous.accounts.length, 2);
+
+    const unmatched = C360.portfolioQuery.ask("what is the weather in paris", ccView);
+    eq("CC.27 an unanswerable question is not matched", unmatched.matched, false);
+    check("CC.27 it says the question cannot be answered from the data",
+        unmatched.headline.indexOf("cannot be answered") !== -1);
+    eq("CC.27 and names no accounts", unmatched.accounts.length, 0);
+    check("CC.27 but offers what it can answer", unmatched.suggestions.length > 0);
+
+    // With no stored history the worsening-health question is honest about it.
+    C360.history.reset();
+    const worsening = C360.portfolioQuery.ask("which accounts have worsening health",
+        ccView);
+    check("CC.28 with fewer than two runs, 'worsening health' says it is not answerable",
+        worsening.headline.indexOf("Not answerable yet") !== -1);
+    check("CC.28 and says a second refresh is what makes it answerable",
+        worsening.detail.some((line) => line.indexOf("two stored runs") !== -1));
+
+    eq("CC.29 every answer is marked derived, never model",
+        [contactAnswer, riskAnswer, whyAnswer, unmatched]
+            .every((answer) => answer.provenance === "derived"), true);
+
+    // ---- purity ------------------------------------------------------
+    eq("CC.30 the same question on the same portfolio gives the same answer",
+        JSON.stringify(C360.portfolioQuery.ask("Who should I contact today?", ccView)),
+        JSON.stringify(C360.portfolioQuery.ask("Who should I contact today?", ccView)));
+    eq("CC.30 the brief is deterministic",
+        JSON.stringify(C360.brief.build(cancelled, ccRow, { asOf: ASOF })),
+        JSON.stringify(C360.brief.build(cancelled, ccRow, { asOf: ASOF })));
+
+    C360.history.reset();
+
 
     // The async AI checks have to finish before the harness reports.
     return Promise.all(aiChecks);

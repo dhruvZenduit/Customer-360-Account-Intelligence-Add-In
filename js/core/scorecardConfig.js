@@ -390,6 +390,30 @@ C360.scorecardConfig = {
         },
 
         /**
+         * Display labels for the override rules.
+         *
+         * Written out rather than derived from the rule name, because
+         * de-camelCasing produces "Critical Ticket Beyond Sla" — and an
+         * interface that mangles its own acronyms reads as unfinished no matter
+         * how correct the number beside it is. These are also shorter than the
+         * rule names, which matters in a dense queue row.
+         */
+        overrideLabels: {
+            explicitCancellationRequest: "Cancellation signal",
+            explicitCompetitorSwitch: "Competitor threat",
+            safetyCritical: "Safety incident",
+            hosComplianceCritical: "HOS / compliance",
+            executiveEscalation: "Executive escalation",
+            serviceOutage: "Service outage",
+            criticalTicketBeyondSla: "SLA breach",
+            renewalWindowWithNegativeSignals: "Renewal risk",
+            overdueCommitment: "Overdue commitment",
+            quoteAwaitingResponse: "Quote awaiting response",
+            accountReviewOverdue: "Account review overdue",
+            qualifiedExpansion: "Expansion signal"
+        },
+
+        /**
          * Which signals count as "negative" for renewalWindowWithNegativeSignals.
          * Enumerated deliberately: "health is low" is not a negative signal, it
          * is a different number, and coupling the two is what Phase 3 exists to

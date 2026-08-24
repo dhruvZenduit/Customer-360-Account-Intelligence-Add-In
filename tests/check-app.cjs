@@ -8,10 +8,15 @@
  * project has no dependencies and should keep none), this file provides the
  * few DOM methods app.js actually uses and drives the real screen flow:
  *
- *   start -> welcome screen
- *         -> select an account -> loading -> dashboard
- *         -> refresh
- *         -> unknown account -> error screen
+ *   start                 -> the Command Center, scored and rendered
+ *   openAccount           -> the account workspace + the legacy sections
+ *   openBrief             -> the composed account brief
+ *   askAi                 -> a contextual portfolio answer
+ *   unknown account       -> the error screen
+ *
+ * The DOM stub is deliberately minimal. Anything app.js reaches for that the
+ * stub does not provide is a signal that the app has started depending on real
+ * browser behaviour, which is worth knowing about.
  */
 
 "use strict";
@@ -53,12 +58,24 @@ function makeElement(id) {
 
 const elements = {};
 [
-    "c360-app", "c360-search", "c360-search-results", "c360-mock-banner",
+    "c360-app", "c360-mock-banner",
     "c360-account-header", "c360-toolbar", "c360-source-status",
-    "c360-content", "c360-welcome", "c360-error",
-    // Phase 6/7 containers.
-    "c360-viewnav", "c360-portfolio", "c360-scorecard-block"
+    "c360-content", "c360-error",
+    // Command-center shell.
+    "c360-rail", "c360-cmdhead", "c360-strip", "c360-portfolio",
+    "c360-scorecard-block", "c360-modal", "c360-aidrawer"
 ].forEach((id) => { elements[id] = makeElement(id); });
+
+/*
+ * The header renders its own search input and clock, so app.js re-reads those
+ * ids after every chrome render. The stub returns a persistent element for any
+ * id it is asked for, which mirrors the browser closely enough to exercise the
+ * re-cache-and-rebind path rather than skipping it.
+ */
+function elementFor(id) {
+    if (!elements[id]) { elements[id] = makeElement(id); }
+    return elements[id];
+}
 
 const sandbox = {
     console: console,
@@ -93,9 +110,17 @@ sandbox.window.sessionStorage = {
 };
 
 sandbox.document = {
-    getElementById: (id) => elements[id] || null,
+    getElementById: (id) => elementFor(id),
     addEventListener: function () {}
 };
+
+// The header carries a live clock, so app.js sets an interval. Stubbed rather
+// than left undefined: an unhandled ReferenceError here would mask whatever the
+// test was actually checking.
+sandbox.setInterval = function () { return 0; };
+sandbox.clearInterval = function () {};
+sandbox.navigator = { clipboard: undefined };
+sandbox.window.navigator = sandbox.navigator;
 
 vm.createContext(sandbox);
 
@@ -140,133 +165,319 @@ function waitFor(predicate, label) {
 // ---------------------------------------------------------------------
 
 async function run() {
-    // ---- welcome screen ---------------------------------------------
-    // Started with ?view=account so the account view is showing with nothing
-    // selected — which is the one path that reaches the welcome screen.
-    sandbox.location.search = "?view=account";
+    // =================================================================
+    // The Command Center is the landing screen
+    // =================================================================
     C360.app.start({});
 
-    check("app marks itself started", elements["c360-app"].getAttribute("data-started") === "true");
-    check("the view switch is rendered",
-        elements["c360-viewnav"].innerHTML.indexOf("Command Center") !== -1);
-    check("the account tab is disabled before an account is chosen",
-        elements["c360-viewnav"].innerHTML.indexOf("disabled") !== -1);
+    check("app marks itself started",
+        elements["c360-app"].getAttribute("data-started") === "true");
 
-    check("welcome screen is visible", elements["c360-welcome"].hidden === false);
-    check("welcome screen invites an account selection",
-        elements["c360-welcome"].innerHTML.indexOf("Select a customer account") !== -1);
-    check("account header is hidden before an account is chosen",
-        elements["c360-account-header"].hidden === true);
-    check("toolbar is hidden before an account is chosen",
-        elements["c360-toolbar"].hidden === true);
-    check("the scorecard block is hidden before an account is chosen",
-        elements["c360-scorecard-block"].hidden === true);
-    check("search input has an input listener",
+    // ---- the shell ---------------------------------------------------
+    const rail = elements["c360-rail"].innerHTML;
+    check("the navigation rail renders every destination",
+        rail.indexOf("Command Center") !== -1 && rail.indexOf("Accounts") !== -1
+        && rail.indexOf("Signals") !== -1 && rail.indexOf("Intelligence") !== -1
+        && rail.indexOf("Settings") !== -1);
+    check("the rail marks the current screen",
+        rail.indexOf('aria-current="page"') !== -1);
+    check("the Intelligence destination is disabled until an account is chosen",
+        rail.indexOf("disabled") !== -1);
+    check("rail labels are in the DOM, not revealed only by CSS",
+        rail.indexOf("c360-rail-label") !== -1);
+
+    const head = elements["c360-cmdhead"].innerHTML;
+    check("the header shows the product line",
+        head.indexOf("Customer Intelligence") !== -1);
+    check("the header shows the screen title",
+        head.indexOf("Command Center") !== -1);
+    check("the header shows a live clock", head.indexOf('id="c360-clock"') !== -1);
+    check("the header shows a system status lamp",
+        head.indexOf("c360-livedot") !== -1);
+    check("the header carries the single search combobox",
+        head.indexOf('id="c360-search"') !== -1
+        && head.indexOf('role="combobox"') !== -1);
+    check("the header offers Portfolio AI", head.indexOf("Ask Portfolio AI") !== -1);
+    check("the header offers Refresh", head.indexOf('id="c360-pf-refresh"') !== -1);
+    check("the search input is bound after the header renders",
         (elements["c360-search"]._listeners.input || []).length === 1);
 
-    // ---- the Command Center (Phase 6) -------------------------------
-    C360.app.loadPortfolio({});
-
-    check("the portfolio container is visible once loading starts",
-        elements["c360-portfolio"].hidden === false);
-    check("the portfolio shows a loading state while scoring",
+    check("the workspace shows a scoring state while the portfolio loads",
         elements["c360-portfolio"].innerHTML.indexOf("Scoring the portfolio") !== -1);
 
     await waitFor(
-        () => elements["c360-portfolio"].innerHTML.indexOf("Portfolio overview") !== -1,
+        () => elements["c360-portfolio"].innerHTML.indexOf("Priority Queue") !== -1,
         "the Command Center to render"
     );
 
-    const portfolio = elements["c360-portfolio"].innerHTML;
+    const cc = elements["c360-portfolio"].innerHTML;
 
-    check("the Command Center renders its title",
-        portfolio.indexOf("Customer Portfolio Command Center") !== -1);
-    check("the portfolio reports a real account count",
-        /\d+ accounts<\/span>/.test(portfolio));
-    check("the portfolio renders the top-priority queue",
-        portfolio.indexOf("Top priorities") !== -1);
-    check("the portfolio renders all four action queues",
-        portfolio.indexOf(">SAVE ") !== -1 && portfolio.indexOf(">FIX ") !== -1
-        && portfolio.indexOf(">GROW ") !== -1 && portfolio.indexOf(">ENGAGE ") !== -1);
-    check("the portfolio states that queue counts do not sum to the total",
-        portfolio.indexOf("do not sum to") !== -1);
-    check("priority is conveyed as text, not only colour",
-        portfolio.indexOf("c360-sc-level--P0") !== -1 || portfolio.indexOf(">P1<") !== -1
-        || portfolio.indexOf(">P2<") !== -1 || portfolio.indexOf(">P3<") !== -1);
-    check("the portfolio shows a manual refresh control",
-        portfolio.indexOf("Refresh portfolio") !== -1);
-    check("the portfolio states refresh is not continuous",
-        portfolio.indexOf("No model runs") !== -1);
-    check("the portfolio renders the metrics panel",
-        portfolio.indexOf("Success metrics") !== -1);
-    check("unmeasurable metrics say so rather than showing zero",
-        portfolio.indexOf("Not yet measurable") !== -1);
-    check("mock banner is shown on the Command Center",
+    // ---- status strip ------------------------------------------------
+    const strip = elements["c360-strip"].innerHTML;
+    check("the status strip is visible", elements["c360-strip"].hidden === false);
+    check("the strip reports the account count", strip.indexOf("Accounts") !== -1);
+    check("the strip reports the urgent count", strip.indexOf("P0 / P1") !== -1);
+    check("the strip reports portfolio ARR", strip.indexOf("Portfolio ARR") !== -1);
+    check("the strip states what ARR actually covers",
+        strip.indexOf("ARR covers") !== -1 || strip.indexOf("ARR across all") !== -1);
+    check("strip numbers are monospace",
+        strip.indexOf("c360-strip-value") !== -1);
+
+    // ---- three panels ------------------------------------------------
+    check("panel 1 is the priority queue", cc.indexOf("Priority Queue") !== -1);
+    check("panel 2 is the active account", cc.indexOf("Active Account") !== -1);
+    check("panel 3 is intelligence", cc.indexOf("Intelligence") !== -1);
+    check("the intelligence panel asks why this account",
+        cc.indexOf("Why this account?") !== -1);
+    check("the queue splits P0 from P1",
+        cc.indexOf("P0 · Immediate") !== -1 && cc.indexOf("P1 · High") !== -1);
+    check("an account is selected by default, so the panels answer something",
+        cc.indexOf("is-selected") !== -1);
+
+    // ---- health and priority stay separate ---------------------------
+    check("health and priority are separate figures",
+        cc.indexOf(">Health<") !== -1 && cc.indexOf(">Priority<") !== -1);
+    check("the intelligence panel says health is not an input to priority",
+        cc.indexOf("Health is calculated separately") !== -1);
+    check("the priority score is decomposed into weighted factors",
+        cc.indexOf("c360-bar-total-value") !== -1);
+
+    // ---- next best action -------------------------------------------
+    check("NEXT BEST ACTION is rendered", cc.indexOf("Next best action") !== -1);
+    check("the action carries an owner, a due date and a confidence",
+        cc.indexOf(">Owner<") !== -1 && cc.indexOf(">Due<") !== -1
+        && cc.indexOf(">Confidence<") !== -1);
+    check("the action can be executed from this screen",
+        cc.indexOf("data-brief-account") !== -1);
+
+    // ---- queues, matrix, feed ---------------------------------------
+    check("all four action queues are interactive filters",
+        cc.indexOf('data-portfolio-value="save"') !== -1
+        && cc.indexOf('data-portfolio-value="fix"') !== -1
+        && cc.indexOf('data-portfolio-value="grow"') !== -1
+        && cc.indexOf('data-portfolio-value="engage"') !== -1);
+    check("the queue counts are not presented as a total",
+        cc.indexOf("do not sum to") !== -1);
+    check("the portfolio matrix is rendered", cc.indexOf("Portfolio Matrix") !== -1);
+    check("matrix nodes are positioned from computed scores",
+        /left:\d+\.\d+%;bottom:\d+\.\d+%/.test(cc));
+    check("matrix nodes are clickable",
+        cc.indexOf("c360-mnode") !== -1 && cc.indexOf("data-select-account") !== -1);
+    check("matrix nodes carry a hover readout", cc.indexOf("c360-mtip") !== -1);
+    check("the signal feed is rendered",
+        cc.indexOf("Latest Portfolio Signals") !== -1);
+    check("the feed says when it was last updated",
+        cc.indexOf("Last updated") !== -1);
+    check("feed timestamps are monospace", cc.indexOf("c360-feed-time") !== -1);
+
+    // ---- honesty properties -----------------------------------------
+    check("priority is never colour alone — every dot has its level text",
+        cc.indexOf("c360-pdot") !== -1 && /c360-plevel--P[0-3]/.test(cc));
+    check("the mock banner is shown on the Command Center",
         elements["c360-mock-banner"].hidden === false);
+    check("no 'undefined' reaches the rendered Command Center",
+        cc.indexOf("undefined") === -1);
+    check("no 'NaN' reaches the rendered Command Center", cc.indexOf("NaN") === -1);
+    check("every Command Center id and class is c360- prefixed",
+        !/\s(?:id|class)="(?!c360-)[^"]/.test(cc));
 
-    // ---- load an account ---------------------------------------------
-    C360.app.loadAccount("acc-001", {});
+    // A trend needs two stored runs. On the first load there is one, so the
+    // honest empty state must be showing rather than a fabricated line.
+    check("with one scoring run, no trend line is drawn",
+        cc.indexOf("c360-trend-empty") !== -1);
+    check("and it explains that a second run is needed",
+        cc.indexOf("second refresh") !== -1 || cc.indexOf("scoring run") !== -1);
 
-    check("loading state is shown immediately",
-        elements["c360-content"].innerHTML.indexOf("Building account intelligence") !== -1);
+    // =================================================================
+    // Selection updates the panels without navigating
+    // =================================================================
+    const firstSelected = C360.app._state.selectedAccountId;
+    const other = C360.app._state.portfolioView.allRows
+        .filter((row) => row.accountId !== firstSelected)[0];
+
+    C360.app.selectAccount(other.accountId);
+
+    check("selecting a different account keeps the user on the Command Center",
+        C360.app._state.screen === "command");
+    check("and the centre panel now describes it",
+        elements["c360-portfolio"].innerHTML
+            .indexOf(other.accountName) !== -1);
+    check("selection required no refetch",
+        C360.app._state.portfolioLoading === false);
+
+    // =================================================================
+    // Action queue filtering
+    // =================================================================
+    C360.app.goTo("accounts");
+    C360.app.toggleFilter("queue", "save");
+    await waitFor(
+        () => elements["c360-portfolio"].innerHTML.indexOf("c360-pf-table") !== -1,
+        "the filtered account list"
+    );
+
+    const listed = elements["c360-portfolio"].innerHTML;
+    check("filtering by SAVE renders the account list", listed.indexOf("Accounts") !== -1);
+    check("the active queue filter is marked pressed",
+        listed.indexOf('aria-pressed="true"') !== -1);
+    check("the filtered list offers a way to clear",
+        listed.indexOf("Clear filters") !== -1);
+
+    const saveCount = C360.app._state.portfolioView.summary.queues.save;
+    check("the filtered row count matches the computed SAVE count",
+        C360.app._state.portfolioView.rows.length === saveCount,
+        C360.app._state.portfolioView.rows.length + " vs " + saveCount);
+
+    C360.app.clearFilters();
+    check("clearing filters restores every account",
+        C360.app._state.portfolioView.rows.length
+            === C360.app._state.portfolioView.allRows.length);
+
+    // =================================================================
+    // Signals screen
+    // =================================================================
+    C360.app.goTo("signals");
+    check("the signals screen renders the feed at full width",
+        elements["c360-portfolio"].innerHTML.indexOf("Latest Portfolio Signals") !== -1);
+
+    // =================================================================
+    // Settings screen
+    // =================================================================
+    C360.app.goTo("settings");
+    const settings = elements["c360-portfolio"].innerHTML;
+    check("settings shows the health weights", settings.indexOf("Health Weights") !== -1);
+    check("settings shows the priority weights",
+        settings.indexOf("Priority Weights") !== -1);
+    check("settings discloses that sending is disabled",
+        settings.indexOf("Disabled") !== -1);
+    check("settings states it is read-only by design",
+        settings.indexOf("Read-only by design") !== -1);
+
+    C360.app.goTo("command");
+
+    // =================================================================
+    // Portfolio AI drawer
+    // =================================================================
+    C360.app.askAi("Who should I contact today?");
+
+    const drawer = elements["c360-aidrawer"].innerHTML;
+    check("the AI drawer opens", elements["c360-aidrawer"].hidden === false);
+    check("it is a drawer, not a takeover",
+        elements["c360-portfolio"].innerHTML.length > 0);
+    check("the answer references real accounts",
+        drawer.indexOf("c360-aref") !== -1);
+    check("the answer shows how it was derived", drawer.indexOf("How:") !== -1);
+    check("the drawer offers suggested questions", drawer.indexOf("c360-sug") !== -1);
+    check("the drawer states the AI layer is off",
+        drawer.indexOf("AI layer is off") !== -1);
+
+    C360.app.askAi("what is the weather in paris");
+    check("an unanswerable question says so rather than improvising",
+        elements["c360-aidrawer"].innerHTML.indexOf("cannot be answered") !== -1);
+    check("and offers what it can answer instead",
+        elements["c360-aidrawer"].innerHTML.indexOf("What this panel can answer") !== -1);
+
+    C360.app.closeAi();
+    check("closing the drawer hides it", elements["c360-aidrawer"].hidden === true);
+
+    // =================================================================
+    // Generate Brief
+    // =================================================================
+    const briefTarget = C360.app._state.portfolioView.urgent[0];
+    C360.app.openBrief(briefTarget.accountId);
+
+    const brief = elements["c360-modal"].innerHTML;
+    check("the brief modal opens", elements["c360-modal"].hidden === false);
+    check("the brief has a situation section", brief.indexOf("Situation") !== -1);
+    check("the brief states why it matters", brief.indexOf("Why it matters") !== -1);
+    check("the brief lists customer concerns",
+        brief.indexOf("Customer concerns") !== -1);
+    check("the brief gives a recommended approach",
+        brief.indexOf("Recommended approach") !== -1);
+    check("the brief always lists open questions",
+        brief.indexOf("Open questions") !== -1);
+    check("the brief can be copied", brief.indexOf('id="c360-brief-copy"') !== -1);
+    check("the brief states it was composed from cited records",
+        brief.indexOf("Composed from the records cited above") !== -1);
+    check("the brief is a document, not a chat transcript",
+        brief.indexOf("c360-modal") !== -1 && brief.indexOf("typing") === -1);
+
+    const briefText = C360.brief.toText(C360.app._state.brief);
+    check("the copyable brief is plain text with the same sections",
+        briefText.indexOf("SITUATION") !== -1
+        && briefText.indexOf("OPEN QUESTIONS") !== -1);
+    check("the copyable brief is labelled sample data",
+        briefText.indexOf("Sample data") !== -1);
+
+    C360.app.closeBrief();
+    check("closing the brief hides the modal", elements["c360-modal"].hidden === true);
+
+    // =================================================================
+    // Account detail workspace
+    // =================================================================
+    C360.app.openAccount("acc-001");
+
+    check("the workspace renders immediately from the loaded model",
+        elements["c360-portfolio"].innerHTML.indexOf("ACME TRANSPORTATION") !== -1
+        || elements["c360-portfolio"].innerHTML.indexOf("Acme Transportation") !== -1);
+
+    const ws = elements["c360-portfolio"].innerHTML;
+    check("the workspace offers a way back to the Command Center",
+        ws.indexOf("c360-aw-back") !== -1);
+    check("the workspace leads with health, priority and renewal",
+        ws.indexOf(">Health<") !== -1 && ws.indexOf(">Priority<") !== -1
+        && ws.indexOf(">Renewal<") !== -1);
+    check("the workspace shows the next best action",
+        ws.indexOf("Next best action") !== -1);
+    check("the workspace splits signals from activity",
+        ws.indexOf(">Signals<") !== -1 && ws.indexOf(">Activity<") !== -1);
+    check("the workspace shows what changed since the previous run",
+        ws.indexOf("What Changed") !== -1);
+    check("every workspace id and class is c360- prefixed",
+        !/\s(?:id|class)="(?!c360-)[^"]/.test(ws));
 
     await waitFor(
         () => elements["c360-content"].innerHTML.indexOf("c360-section") !== -1,
-        "the dashboard to render"
+        "the legacy sections to load beneath the workspace"
     );
 
     const content = elements["c360-content"].innerHTML;
     const scorecard = elements["c360-scorecard-block"].innerHTML;
 
-    // ---- the scorecard block (Phase 7) ------------------------------
-    check("the scorecard block is visible on the account page",
-        elements["c360-scorecard-block"].hidden === false);
-    check("the scorecard renders health, priority and confidence",
-        scorecard.indexOf(">Health<") !== -1 && scorecard.indexOf(">Priority<") !== -1
-        && scorecard.indexOf(">Confidence<") !== -1);
-    check("the health score is reachable from its breakdown drawer",
-        scorecard.indexOf("Health score breakdown") !== -1);
-    check("the breakdown prints the arithmetic",
-        scorecard.indexOf("c360-sc-breakdown") !== -1 && scorecard.indexOf("&times;") !== -1);
-    check("the priority drawer names the reasons",
-        scorecard.indexOf("Why this account is") !== -1);
-    check("a primary reason is always stated",
-        scorecard.indexOf("Primary reason:") !== -1);
-    check("the confidence drawer lists per-source states",
-        scorecard.indexOf("Data confidence") !== -1);
-    check("the identity drawer is present",
-        scorecard.indexOf("Account identity") !== -1);
-    check("the scorecard explains that health and priority can disagree",
-        scorecard.indexOf("can disagree") !== -1);
-    check("recommendations carry an owner and a due date",
-        scorecard.indexOf("Suggested owner") !== -1 && scorecard.indexOf(">Due<") !== -1);
-    check("drafts are labelled DRAFT in the markup",
-        scorecard.indexOf(">DRAFT<") !== -1);
-    check("the send control is disabled with a stated reason",
-        scorecard.indexOf("Approve &amp; Send") !== -1
-        && scorecard.indexOf("No outbound integration is connected") !== -1);
-    check("all four feedback controls are offered",
-        scorecard.indexOf(">Useful<") !== -1 && scorecard.indexOf(">Incorrect<") !== -1
-        && scorecard.indexOf(">Not needed<") !== -1
-        && scorecard.indexOf(">Already handled<") !== -1);
-    check("feedback storage is disclosed as local-only",
-        scorecard.indexOf("stored in this browser session only") !== -1);
-    check("every scorecard id and class is c360- prefixed",
-        !/\s(?:id|class)="(?!c360-)[^"]/.test(scorecard));
+    // ---- the Phase 7 scorecard block, reused unchanged --------------
+    check("the scorecard block renders inside the workspace",
+        elements["c360-portfolio"].innerHTML.indexOf("Portfolio scorecard") !== -1
+        || scorecard.indexOf("Portfolio scorecard") !== -1);
 
-    check("account header renders the account name",
-        elements["c360-account-header"].innerHTML.indexOf("Acme Transportation") !== -1);
-    check("account header is visible", elements["c360-account-header"].hidden === false);
-    check("welcome screen is dismissed", elements["c360-welcome"].hidden === true);
-    check("mock banner is shown for mock data", elements["c360-mock-banner"].hidden === false);
-    check("mock banner says the data is invented",
-        elements["c360-mock-banner"].innerHTML.indexOf("Sample data") !== -1);
+    const explain = elements["c360-portfolio"].innerHTML + scorecard;
+    check("the health breakdown is still reachable",
+        explain.indexOf("Health score breakdown") !== -1);
+    check("the breakdown still prints the arithmetic",
+        explain.indexOf("c360-sc-breakdown") !== -1
+        && explain.indexOf("&times;") !== -1);
+    check("the priority drawer still names the reasons",
+        explain.indexOf("Why this account is") !== -1);
+    check("a primary reason is still stated",
+        explain.indexOf("Primary reason:") !== -1);
+    check("the confidence drawer is still present",
+        explain.indexOf("Data confidence") !== -1);
+    check("drafts are still labelled DRAFT",
+        explain.indexOf(">DRAFT<") !== -1);
+    check("the send control is still disabled with a stated reason",
+        explain.indexOf("Approve &amp; Send") !== -1
+        && explain.indexOf("No outbound integration is connected") !== -1);
+    check("all four feedback controls are still offered",
+        explain.indexOf(">Useful<") !== -1 && explain.indexOf(">Incorrect<") !== -1
+        && explain.indexOf(">Not needed<") !== -1
+        && explain.indexOf(">Already handled<") !== -1);
+    check("feedback storage is still disclosed as local-only",
+        explain.indexOf("stored in this browser session only") !== -1);
+
+    // ---- the legacy sections, unchanged -----------------------------
     check("source status strip is rendered",
         elements["c360-source-status"].innerHTML.indexOf("Internal data") !== -1);
-    check("toolbar is rendered with a refresh button",
-        elements["c360-toolbar"].innerHTML.indexOf("Refresh intelligence") !== -1);
-    check("toolbar shows a last-updated stamp",
-        elements["c360-toolbar"].innerHTML.indexOf("Last updated:") !== -1);
+    check("the toolbar still offers the period and view filters",
+        elements["c360-toolbar"].innerHTML.indexOf("Period") !== -1
+        && elements["c360-toolbar"].innerHTML.indexOf("View") !== -1);
 
     [
         ["What changed", "c360-what-changed"],
@@ -284,42 +495,63 @@ async function run() {
         ["Recommended actions", "c360-actions"],
         ["Sources", "c360-sources"]
     ].forEach(([label, id]) => {
-        check("section rendered: " + label, content.indexOf('id="' + id + '"') !== -1);
+        check("legacy section still rendered: " + label,
+            content.indexOf('id="' + id + '"') !== -1);
     });
 
-    // ---- refresh ------------------------------------------------------
-    const before = elements["c360-toolbar"].innerHTML;
-    C360.app.loadAccount("acc-001", { forceRefresh: true });
-    check("refresh keeps the dashboard on screen rather than blanking it",
-        elements["c360-content"].innerHTML.indexOf("c360-section") !== -1);
+    // =================================================================
+    // Refresh records a second run, which unlocks the trend
+    // =================================================================
+    C360.history.reset();
+    C360.history.recordAll(C360.app._state.portfolioModels);
+    C360.app._state.portfolioModels.forEach((model) => {
+        // A second run at a different asOf, so the trend has two real points.
+        C360.history.record(Object.assign({}, model, {
+            asOf: "2026-08-25T12:00:00.000Z",
+            summary: Object.assign({}, model.summary, {
+                healthScore: model.summary.healthAvailable
+                    ? model.summary.healthScore - 6 : null
+            })
+        }));
+    });
 
-    await waitFor(
-        () => elements["c360-toolbar"].innerHTML.indexOf("Refreshing") === -1
-            && elements["c360-toolbar"].innerHTML.indexOf("Refresh intelligence") !== -1,
-        "the refresh to finish"
-    );
-    check("refresh completes and re-enables the button", true);
-    check("refresh re-rendered the toolbar", typeof before === "string");
+    C360.app.goTo("command");
 
-    // ---- unknown account -----------------------------------------------
-    C360.app.loadAccount("acc-does-not-exist", {});
+    const withTrend = elements["c360-portfolio"].innerHTML;
+    check("with two stored runs, a real trend line is drawn",
+        withTrend.indexOf("c360-spark-line") !== -1);
+    check("the trend reports its delta over the stored runs",
+        withTrend.indexOf("c360-trend-delta") !== -1);
+
+    // =================================================================
+    // Unknown account
+    // =================================================================
+    C360.app.openAccount("acc-does-not-exist");
     await waitFor(() => elements["c360-error"].hidden === false, "the error screen");
 
     check("error screen explains the failure",
         elements["c360-error"].innerHTML.indexOf("could not be loaded") !== -1);
     check("error screen offers a retry",
         elements["c360-error"].innerHTML.indexOf("Try again") !== -1);
-    check("dashboard content is cleared on error", elements["c360-content"].innerHTML === "");
 
-    // ---- recovery -------------------------------------------------------
-    C360.app.loadAccount("acc-004", {});
+    // =================================================================
+    // Recovery
+    // =================================================================
+    C360.app.openAccount("acc-004");
+
+    // The workspace renders from the loaded model immediately, so waiting for
+    // the name would pass before the source fetch settles. Wait for the thing
+    // that only happens once it has: the account being remembered.
     await waitFor(
-        () => elements["c360-account-header"].innerHTML.indexOf("Northline") !== -1,
+        () => JSON.parse(storage.get("c360:recent-accounts") || "[]")
+            .some((item) => item.id === "acc-004"),
         "recovery to another account"
     );
     check("app recovers from the error state", elements["c360-error"].hidden === true);
+    check("the recovered account is on screen",
+        elements["c360-portfolio"].innerHTML.indexOf("NORTHLINE") !== -1
+        || elements["c360-portfolio"].innerHTML.indexOf("Northline") !== -1);
 
-    // ---- recent accounts persist ------------------------------------------
     const recent = JSON.parse(storage.get("c360:recent-accounts") || "[]");
     check("viewed accounts are remembered", recent.length >= 2, JSON.stringify(recent));
     check("the most recent account is first", recent[0].id === "acc-004");

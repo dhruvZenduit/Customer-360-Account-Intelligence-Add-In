@@ -1,19 +1,67 @@
-# Customer 360 — Account Intelligence Add-In
+# Customer 360 — Command Center
 
-An internal MyGeotab add-in with two screens, answering two questions.
+A dark, high-density customer-intelligence workspace for a MyGeotab add-in. It
+answers one question, in one screen, in this order:
 
-The **Customer Portfolio Command Center** answers the portfolio question:
+> **Who should I care about today, why, how urgent, what should I do — and can I
+> do it from here?**
 
-> **Who should I care about today, why, and exactly what should I do?**
+```text
+┌──────────────────┬──────────────────────────┬────────────────────┐
+│ PRIORITY QUEUE   │ ACTIVE ACCOUNT           │ INTELLIGENCE       │
+│                  │                          │                    │
+│ WHO?             │ HOW URGENT?              │ WHY?               │
+│ P0/P1, worst     │ health · priority · ARR  │ numbered evidence  │
+│ first, scannable │ renewal · health trend   │ score, decomposed  │
+│                  │                          │                    │
+│                  │ NEXT BEST ACTION  ← WHAT │                    │
+│                  │ [ Generate brief ] ← DO  │                    │
+└──────────────────┴──────────────────────────┴────────────────────┘
+     ACTION QUEUES  ·  PORTFOLIO MATRIX  ·  LATEST SIGNALS
+```
 
-The **account view** answers the single-account question it always did:
+Selecting an account in the left panel updates the other two instantly — every
+model is already in memory, so the scan → select → read → act loop never waits
+on a network call. That immediacy is why the layout works.
 
-> **What do I need to know about this customer before I contact them?**
+## The three outputs, never collapsed into one
 
-Select an account and the page assembles internal activity, the customer's own
-website, public web research, contacts, risks, opportunities and recommended
-next actions into a single scannable view — now with a scorecard above it that
-scores the account, explains every number, and says what to do next.
+```text
+HEALTH SCORE        How healthy is the account?          0-100, five categories
+PRIORITY SCORE      How urgently should someone act?     P0-P3 + 0-100
+RECOMMENDED ACTION  What specifically should happen?     why / evidence / owner / due
+```
+
+Plus a fourth, operational dimension: the **action queue** — SAVE, FIX, GROW or
+ENGAGE — which says what *kind* of work an account needs.
+
+Health and priority are calculated **independently** and are allowed to
+disagree. An account can legitimately be `Health 85 / Priority P1` — healthy,
+with one critical unresolved camera issue — or `Health 42 / Priority P3` —
+unhealthy, with nothing to do today. The Portfolio Matrix plots one against the
+other precisely so those disagreements are visible; a single blended score
+cannot put an account in the "urgent but healthy" quadrant at all.
+
+Scoring is **deterministic JavaScript**. The AI layer may propose a signal and
+write prose; it never produces a number. Turning AI off changes no score
+anywhere — there is a test for that.
+
+## Design
+
+Dark, dense, and closer to a trading terminal than a marketing dashboard: small
+type, tight rhythm, monospace for anything numeric, and a lot of real
+information per square inch. No giant gauges, no decorative charts, no KPI-card
+grid.
+
+Colour is rationed to five jobs — priority level, severity, source
+attribution, model-derived content, and the mock-data marker. A whole card is
+never painted red or green: state is a 2px left border, a small status dot and a
+4-6% wash, and **always** alongside the state in words. Every priority dot sits
+next to its literal `P0`, so removing the colour entirely loses no information.
+
+The visual system lives in one token block at the top of `addin.css`. The
+original account-dashboard components were written against those variables, so
+the dark treatment reaches all of them without any of them being touched.
 
 ## The three outputs, never collapsed into one
 
@@ -47,12 +95,37 @@ anywhere — there is a test for that too.
 | **Device health / portal usage / contracts / commitments / communications / outcomes** | **MOCK** — the six sources the scorecard added; endpoints specified, none connected |
 | **AI layer** | **OFF** (`scorecardConfig.ai.enabled: false`). The product is fully functional without it. |
 | **Outbound actions** | **NONE POSSIBLE.** `approval.sendingEnabled: false`, and exactly one code path could ever send anything. |
-| **Build** | No build step. Static files, no dependencies. |
-| **Tests** | 875 checks across three suites, all passing (659 logic + 69 app shell + 147 wiring) |
+| **Build** | No build step. Static files, no dependencies, no framework. |
+| **Tests** | 1,027 checks across three suites, all passing (730 logic + 123 app shell + 174 wiring) |
 
 While any source is mocked, a banner across the top of the dashboard says so,
 and every invented record carries a `MOCK` badge. Nothing on the page can be
 mistaken for a real customer record.
+
+---
+
+## Why there is no React or Tailwind here
+
+Worth stating plainly, because a dark high-density workspace is exactly the kind
+of thing you would normally reach for a framework to build.
+
+MyGeotab injects this page into **its own document**. That is why every selector
+in `addin.css` is scoped under `#c360-app` and every id and class is prefixed
+`c360-`. A utility framework's global preflight would reset MyGeotab's own
+interface, not just this page — and the fix for that is to scope the framework,
+at which point it is doing less than the 900 lines of tokenised CSS it replaced.
+
+The add-in also ships as static files with no build step, matching the other
+add-ins in this org. Adding a bundler would change how it is deployed; adding
+React and Tailwind from a CDN would add two runtime network dependencies to an
+internal tool that currently has none.
+
+So the component model here is plain functions that return HTML strings, one
+module per screen area, composed the same way components are. `js/ui/parts.js`
+holds the shared primitives, and they encode rules rather than just markup —
+`parts.plevel()` **cannot** render a priority dot without its level text beside
+it, and `parts.figure()` cannot render a missing value as a zero. That is the
+property a design system is actually for, and it does not require a framework.
 
 ---
 
@@ -162,25 +235,37 @@ js/scorecard/approval.js          Phase 8 — the ONE gated action path
 js/scorecard/feedback.js          Phase 9 — four outcomes, per-rule aggregate
 js/scorecard/metrics.js           Phase 9 — measurement, with its caveats
 
+js/scorecard/history.js           run history: trends from STORED runs only
+js/scorecard/brief.js             the composed account brief
+js/scorecard/portfolioQuery.js    deterministic portfolio Q&A ("Portfolio AI")
+
 js/orchestrator.js                parallel fan-out + per-source status
                                   + the bounded-concurrency portfolio batch
-js/ui/components.js               HTML building blocks
+js/ui/components.js               HTML building blocks (original dashboard)
+js/ui/parts.js                    command-center primitives: priority readout,
+                                  figure tile, factor bar, sparkline
+js/ui/shell.js                    nav rail, command header, status strip
 js/ui/render.js                   one function per dashboard section
-js/ui/portfolio.js                Phase 6 — the Command Center screen
-js/ui/scorecard.js                Phase 7 — account scorecard + drawers
-js/ui/approval.js                 Phase 8 — draft review, and why it cannot send
-js/ui/feedback.js                 Phase 9 — the four controls + aggregate
-js/ui/app.js                      state, events, screen flow, routing
+js/ui/portfolio.js                the three-panel Command Center, queue tabs,
+                                  matrix, signal feed, account list
+js/ui/accountWorkspace.js         the full-screen account workspace
+js/ui/brief.js                    the brief modal
+js/ui/portfolioAi.js              the Portfolio AI drawer
+js/ui/scorecard.js                account scorecard + explainability drawers
+js/ui/approval.js                 draft review, and why it cannot send
+js/ui/feedback.js                 the four feedback controls + aggregate
+js/ui/app.js                      state, events, screens, routing
 js/addin.js                       MyGeotab lifecycle entry point
 
 docs/                             the nine-phase build plan + Appendix A
 docs/phase-1-audit.md             data audit + the architectural decisions taken
 
-tests/run-tests.cjs               logic + rendering (659 checks, loads the two below)
-tests/scorecard-tests.cjs         Phases 1-9, numbered to the phase docs
+tests/run-tests.cjs               logic + rendering (730 checks, loads the two below)
+tests/scorecard-tests.cjs         Phases 1-9 + the command-center engines
 tests/scenario-tests.cjs          17 end-to-end scenarios
-tests/check-app.cjs               app shell screen flow (69 checks)
-tests/check-wiring.cjs            script/id/load-order consistency (147 checks)
+tests/check-app.cjs               every screen, driven through the real actions
+                                  (123 checks)
+tests/check-wiring.cjs            script/id/load-order consistency (174 checks)
 tests/fixtures/                   26 MOCK accounts, 17 scenarios, 8 AI responses
 tests/fixtures/generate.cjs       regenerates the account + AI fixtures
 ```
@@ -297,6 +382,71 @@ Each of these is a function with a test, not a note in a document:
 | No engine reads the clock | `asOf` is injected everywhere | 9.15 |
 
 The four in bold are the ones worth re-running first after any change.
+
+---
+
+## Screens
+
+| Screen | What it is for |
+| ------ | -------------- |
+| **Command Center** | The landing screen. Three panels: priority queue, active account, intelligence. Plus the action-queue tabs, the portfolio matrix and the signal feed. |
+| **Accounts** | The same rows as a filterable, sortable table. Filters combine AND across groups, OR within a group, and round-trip through the URL. |
+| **Signals** | The signal feed and the matrix at full width. |
+| **Intelligence** | One account's workspace: figures, next best action, signals vs activity, health history, and the full explainability drawers beneath. |
+| **Settings** | The scoring configuration, **read-only** — every value there is a judgement call that belongs in a reviewed change to `scorecardConfig.js`, not a control nudged at 8am. |
+
+### Generate Brief
+
+Composes the pre-call brief: situation, why it matters, customer concerns,
+recommended approach, open questions. Every sentence is assembled from records
+the scorecard already holds, so there is no step at which prose is invented.
+
+Customer words are rendered as a **blockquote with the record they came from**,
+which is what stops somebody reading our inference aloud on a call as if the
+customer had said it. The **Open questions** section is never omitted — a brief
+that only asserts pretends the picture is complete.
+
+### Portfolio AI
+
+A right-side drawer, never a takeover, answering from
+`js/scorecard/portfolioQuery.js`: an intent matcher over the same rows the
+Command Center is rendering. Every answer names real accounts with their real
+scores, every named account is a button, and every answer shows **the query that
+produced it**.
+
+Three reasons it is not a chat model, in order of how much they matter:
+
+1. A wrong answer to "which customers are at highest risk?" is acted on before a
+   phone call, and a fluent guess is indistinguishable from a correct one.
+2. `ai.enabled` is false and no gateway exists — a drawer that only worked once
+   a model was wired would be a drawer that never worked.
+3. The interesting questions are aggregations. "Who should I contact today?" is
+   a sort, not an inference.
+
+An unmatched question says so and offers what it *can* answer. Two accounts
+sharing a name are reported as ambiguous rather than resolved by guessing.
+
+---
+
+## The health trend, and what it will not do
+
+The sparkline is the single most tempting place in this interface to lie: one
+plausible downward line is worth more to a demo than an honest empty state, and
+a viewer cannot tell the difference.
+
+```text
+0 stored runs   no trend. Says so.
+1 stored run    one real point. Still no line — one point is not a direction.
+2+ stored runs  a real trend, from real stored numbers.
+```
+
+History accumulates in `sessionStorage` as the portfolio is refreshed, so a
+fresh session genuinely starts with no trend and the empty state says exactly
+why. No previous score is invented to make a line appear sooner.
+
+The same rule governs the matrix: an account whose health could not be scored is
+**listed beneath the chart with its reason**, not plotted at zero. Plotting it at
+zero would assert it is critical.
 
 ---
 
