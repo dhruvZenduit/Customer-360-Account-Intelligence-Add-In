@@ -1,0 +1,159 @@
+{
+  "id": "critical-sla-breach",
+  "name": "Critical ticket beyond SLA",
+  "category": "technical",
+  "proves": "The P1 floor from the SLA rule, with the SLA hours read from config per severity rather than hardcoded in the rule.",
+  "data": {
+    "account": {
+      "id": "sc-sla",
+      "name": "Northfork Waste Solutions",
+      "domain": "sc-sla.example",
+      "status": "Active",
+      "customerSince": "2019-05-01",
+      "assetCount": 180,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "fleet-heavy",
+      "products": [
+        "Telematics Core",
+        "Driver Safety Cameras",
+        "Compliance / HOS",
+        "Routing & Dispatch",
+        "Asset Tracking"
+      ],
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [
+      {
+        "id": "sc-t2",
+        "number": "T-9010",
+        "subject": "Fleet-wide telemetry gaps after firmware update",
+        "category": "Connectivity",
+        "opened": "-21d",
+        "lastUpdate": "-3d",
+        "status": "Open",
+        "priority": "Critical",
+        "escalated": true,
+        "mock": true
+      }
+    ],
+    "billingIssues": [],
+    "technicalIssues": [
+      {
+        "id": "sc-e1",
+        "subject": "Telemetry gaps after firmware 4.2",
+        "date": "-21d",
+        "status": "Open",
+        "customerImpact": "Reported by customer as affecting 46 vehicles.",
+        "impactEvidence": "Customer statement on the escalation thread.",
+        "lastActivity": "-3d",
+        "mock": true
+      }
+    ],
+    "reviews": [
+      {
+        "id": "s-r1",
+        "date": "-30d",
+        "type": "Quarterly Business Review",
+        "mock": true
+      }
+    ],
+    "contacts": [
+      {
+        "id": "s-c1",
+        "name": "Dana Reyes",
+        "title": "Fleet Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c2",
+        "name": "Ana Lopez",
+        "title": "Director of Operations",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c3",
+        "name": "Ken Obi",
+        "title": "Director of Safety",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c4",
+        "name": "Rae Kim",
+        "title": "Procurement Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      }
+    ],
+    "external": [],
+    "deviceHealth": {
+      "available": true,
+      "deviceCount": 180,
+      "notCommunicating": 2,
+      "cameraAvailabilityPct": 98,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "portalUsage": {
+      "available": true,
+      "activeUsers": 62,
+      "previousActiveUsers": 60,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "contract": {
+      "id": "s-k1",
+      "startDate": "2019-05-01",
+      "renewalDate": "+300d",
+      "annualValue": 90000,
+      "mock": true
+    },
+    "communications": [
+      {
+        "id": "s-m1",
+        "date": "-9d",
+        "subject": "Thanks",
+        "body": "All good on our side this month.",
+        "author": "Dana Reyes",
+        "mock": true
+      }
+    ],
+    "commitments": [],
+    "outcomes": {
+      "available": true,
+      "trainingCompleted": true,
+      "trainingCompletedDate": "-40d",
+      "recommendationsImplemented": 2,
+      "improvements": [
+        {
+          "label": "Idling reduced",
+          "change": "-12%",
+          "date": "-30d"
+        }
+      ],
+      "mock": true
+    }
+  },
+  "expect": {
+    "level": [
+      "P0",
+      "P1"
+    ],
+    "queue": "fix",
+    "overridesFired": [
+      "criticalTicketBeyondSla"
+    ]
+  }
+}

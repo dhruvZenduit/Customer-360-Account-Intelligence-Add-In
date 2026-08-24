@@ -1,0 +1,37 @@
+{
+  "id": "acc-080",
+  "name": "Torrance Equipment Rental",
+  "category": "inactive",
+  "mock": true,
+  "proves": "Inactive: no recorded activity for months and a very stale review. ENGAGE.",
+  "account": {
+    "industry": "Equipment Rental",
+    "status": "Active",
+    "customerSince": "2017-05-16",
+    "assetCount": 52,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

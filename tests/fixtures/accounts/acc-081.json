@@ -1,0 +1,37 @@
+{
+  "id": "acc-081",
+  "name": "Greywater Marine Supply",
+  "category": "inactive",
+  "mock": true,
+  "proves": "Inactive with no device or portal feed either — health unavailable AND inactive.",
+  "account": {
+    "industry": "Marine Supply",
+    "status": "Active",
+    "customerSince": "2018-08-29",
+    "assetCount": 31,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": false,
+    "portalUsage": false,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

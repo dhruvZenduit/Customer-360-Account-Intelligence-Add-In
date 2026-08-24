@@ -1,0 +1,37 @@
+{
+  "id": "acc-052",
+  "name": "Fairhaven Agricultural Co-op",
+  "category": "expansion",
+  "mock": true,
+  "proves": "Expansion via a second terminal opening plus an open quote. GROW.",
+  "account": {
+    "industry": "Agriculture",
+    "status": "Active",
+    "customerSince": "2018-03-27",
+    "assetCount": 122,
+    "contactProfile": "fleet-heavy",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 1,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": true,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

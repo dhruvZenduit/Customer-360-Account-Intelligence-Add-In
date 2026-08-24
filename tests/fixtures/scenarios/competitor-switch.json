@@ -1,0 +1,133 @@
+{
+  "id": "competitor-switch",
+  "name": "Competitor switch signal",
+  "category": "at-risk",
+  "proves": "P0 from the competitor pattern set. This is the pattern set most prone to false positives, which is exactly why the excerpt travels with it and why Phase 9 measures it per rule.",
+  "data": {
+    "account": {
+      "id": "sc-competitor",
+      "name": "Ironwood Carriers",
+      "domain": "sc-competitor.example",
+      "status": "Active",
+      "customerSince": "2019-05-01",
+      "assetCount": 180,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "fleet-heavy",
+      "products": [
+        "Telematics Core",
+        "Driver Safety Cameras",
+        "Compliance / HOS",
+        "Routing & Dispatch",
+        "Asset Tracking"
+      ],
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [],
+    "billingIssues": [],
+    "technicalIssues": [],
+    "reviews": [
+      {
+        "id": "s-r1",
+        "date": "-30d",
+        "type": "Quarterly Business Review",
+        "mock": true
+      }
+    ],
+    "contacts": [
+      {
+        "id": "s-c1",
+        "name": "Dana Reyes",
+        "title": "Fleet Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c2",
+        "name": "Ana Lopez",
+        "title": "Director of Operations",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c3",
+        "name": "Ken Obi",
+        "title": "Director of Safety",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "s-c4",
+        "name": "Rae Kim",
+        "title": "Procurement Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      }
+    ],
+    "external": [],
+    "deviceHealth": {
+      "available": true,
+      "deviceCount": 180,
+      "notCommunicating": 2,
+      "cameraAvailabilityPct": 98,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "portalUsage": {
+      "available": true,
+      "activeUsers": 62,
+      "previousActiveUsers": 60,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "contract": {
+      "id": "s-k1",
+      "startDate": "2019-05-01",
+      "renewalDate": "+300d",
+      "annualValue": 90000,
+      "mock": true
+    },
+    "communications": [
+      {
+        "id": "sc-m2",
+        "date": "-4d",
+        "direction": "inbound",
+        "subject": "Renewal approach",
+        "body": "Procurement has asked us to run an RFP and look at a competitor before we commit to another term.",
+        "author": "Ana Lopez",
+        "mock": true
+      }
+    ],
+    "commitments": [],
+    "outcomes": {
+      "available": true,
+      "trainingCompleted": true,
+      "trainingCompletedDate": "-40d",
+      "recommendationsImplemented": 2,
+      "improvements": [
+        {
+          "label": "Idling reduced",
+          "change": "-12%",
+          "date": "-30d"
+        }
+      ],
+      "mock": true
+    }
+  },
+  "expect": {
+    "level": "P0",
+    "queue": "save",
+    "overridesFired": [
+      "explicitCompetitorSwitch"
+    ]
+  }
+}

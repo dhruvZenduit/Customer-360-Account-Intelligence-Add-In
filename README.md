@@ -1,12 +1,38 @@
 # Customer 360 — Account Intelligence Add-In
 
-An internal MyGeotab add-in that answers one question about a customer account:
+An internal MyGeotab add-in with two screens, answering two questions.
+
+The **Customer Portfolio Command Center** answers the portfolio question:
+
+> **Who should I care about today, why, and exactly what should I do?**
+
+The **account view** answers the single-account question it always did:
 
 > **What do I need to know about this customer before I contact them?**
 
 Select an account and the page assembles internal activity, the customer's own
 website, public web research, contacts, risks, opportunities and recommended
-next actions into a single scannable view.
+next actions into a single scannable view — now with a scorecard above it that
+scores the account, explains every number, and says what to do next.
+
+## The three outputs, never collapsed into one
+
+```text
+HEALTH SCORE        How healthy is the account?          0-100, five categories
+PRIORITY SCORE      How urgently should someone act?     P0-P3 + 0-100
+RECOMMENDED ACTION  What specifically should happen?     why / evidence / owner / due
+```
+
+These are calculated **independently** and are allowed to disagree. An account
+can legitimately be `Health 85 / Priority P1` — healthy, with one critical
+unresolved camera issue — or `Health 42 / Priority P3` — unhealthy, with nothing
+to do today. Both appear in the test suite, and the second-to-last check in
+`tests/scenario-tests.cjs` exists to prove the first: if priority were quietly a
+function of health, that test fails and nothing else compensates for it.
+
+Scoring is **deterministic JavaScript**. The AI layer may propose a signal and
+write prose; it never produces a number. Turning AI off changes no score
+anywhere — there is a test for that too.
 
 ---
 
@@ -18,8 +44,11 @@ next actions into a single scannable view.
 | **CRM / quotes / orders / tickets / billing / reviews / contacts** | **MOCK** — no backend exists yet; see [What is required to go live](#what-is-required-to-go-live) |
 | **Customer website research** | **MOCK** — needs a server-side extractor |
 | **External web research** | **MOCK** — needs a server-side research endpoint |
+| **Device health / portal usage / contracts / commitments / communications / outcomes** | **MOCK** — the six sources the scorecard added; endpoints specified, none connected |
+| **AI layer** | **OFF** (`scorecardConfig.ai.enabled: false`). The product is fully functional without it. |
+| **Outbound actions** | **NONE POSSIBLE.** `approval.sendingEnabled: false`, and exactly one code path could ever send anything. |
 | **Build** | No build step. Static files, no dependencies. |
-| **Tests** | 255 checks across three suites, all passing (125 logic + 38 app shell + 92 wiring) |
+| **Tests** | 875 checks across three suites, all passing (659 logic + 69 app shell + 147 wiring) |
 
 While any source is mocked, a banner across the top of the dashboard says so,
 and every invented record carries a `MOCK` badge. Nothing on the page can be
@@ -110,16 +139,57 @@ js/intelligence/timeline.js       unified chronological stream
 js/intelligence/summary.js        composed account summary
 js/intelligence/intelligenceEngine.js  runs the pipeline (pure function)
 
+js/core/scorecardConfig.js        every scorecard tunable: weights, thresholds,
+                                  segment rules, override patterns, action
+                                  mappings, feedback + metric policy
+js/services/scorecardSourceService.js  the six new sources (all mock)
+
+js/scorecard/evidence.js          one evidence shape, shared by every engine
+js/scorecard/detect.js            deterministic keyword detection + scope
+js/scorecard/identity.js          Phase 1 — master identity + per-link confidence
+js/scorecard/segments.js          Phase 1 — segment + lifecycle from evidence
+js/scorecard/healthScore.js       Phase 2 — five categories -> weighted 0-100
+js/scorecard/confidence.js        Phase 2 — data confidence, a separate number
+js/scorecard/overrides.js         Phase 3 — P0-P3 override engine (a floor)
+js/scorecard/priority.js          Phase 3 — weighted 0-100 urgency
+js/scorecard/queues.js            Phase 4 — SAVE / FIX / GROW / ENGAGE
+js/scorecard/actionRules.js       Phase 5 — mappings, owners, due dates, claims
+js/scorecard/actionEngine.js      Phase 5 — the seven-part recommendation
+js/scorecard/scorecardEngine.js   the pipeline entry point (pure)
+js/scorecard/portfolio.js         Phase 6 — roll-up, top-N, filters, search
+js/scorecard/ai.js                Phase 8 — model adapter + claim validation
+js/scorecard/approval.js          Phase 8 — the ONE gated action path
+js/scorecard/feedback.js          Phase 9 — four outcomes, per-rule aggregate
+js/scorecard/metrics.js           Phase 9 — measurement, with its caveats
+
 js/orchestrator.js                parallel fan-out + per-source status
+                                  + the bounded-concurrency portfolio batch
 js/ui/components.js               HTML building blocks
 js/ui/render.js                   one function per dashboard section
-js/ui/app.js                      state, events, screen flow
+js/ui/portfolio.js                Phase 6 — the Command Center screen
+js/ui/scorecard.js                Phase 7 — account scorecard + drawers
+js/ui/approval.js                 Phase 8 — draft review, and why it cannot send
+js/ui/feedback.js                 Phase 9 — the four controls + aggregate
+js/ui/app.js                      state, events, screen flow, routing
 js/addin.js                       MyGeotab lifecycle entry point
 
-tests/run-tests.cjs               logic + rendering (125 checks)
-tests/check-app.cjs               app shell screen flow (38 checks)
-tests/check-wiring.cjs            script/id/load-order consistency (92 checks)
+docs/                             the nine-phase build plan + Appendix A
+docs/phase-1-audit.md             data audit + the architectural decisions taken
+
+tests/run-tests.cjs               logic + rendering (659 checks, loads the two below)
+tests/scorecard-tests.cjs         Phases 1-9, numbered to the phase docs
+tests/scenario-tests.cjs          17 end-to-end scenarios
+tests/check-app.cjs               app shell screen flow (69 checks)
+tests/check-wiring.cjs            script/id/load-order consistency (147 checks)
+tests/fixtures/                   26 MOCK accounts, 17 scenarios, 8 AI responses
+tests/fixtures/generate.cjs       regenerates the account + AI fixtures
 ```
+
+The `js/intelligence/` tree is **unchanged**. The scorecard is a new layer beside
+it that reuses its facts, signals, risks and opportunities rather than forking
+them — `js/intelligence/health.js` in particular is deliberately non-numeric and
+stays that way. The reasoning is recorded in
+[`docs/phase-1-audit.md`](docs/phase-1-audit.md#5-the-healthjs-decision--recorded-as-phase-1-requires).
 
 ---
 
@@ -180,11 +250,79 @@ backlog.
   "identify a verified contact".
 - **Absence of evidence is stated as such.** Product gaps read "No current
   usage found in available internal data", never "the customer does not use".
-- **No numeric health scores.** Four qualitative states, each with its basis
-  printed next to it, because the data does not support a defensible scale.
-- **No language model.** The account summary is composed deterministically
-  from counted and quoted values. There is no step where free text is
-  generated, so there is nothing to hallucinate.
+- **No numeric health scores in THIS layer.** `js/intelligence/health.js`
+  reports four qualitative states, each with its basis printed next to it,
+  because a bar reading "Support 60" implies a precision this data does not
+  have. The scorecard layer does produce a numeric score, and answers the same
+  objection differently: it never prints a number without the arithmetic that
+  produced it. Both views ship; the reasoning is in
+  [`docs/phase-1-audit.md`](docs/phase-1-audit.md#5-the-healthjs-decision--recorded-as-phase-1-requires).
+- **No language model in the scoring path, ever.** Every score, band, level and
+  due date is deterministic JavaScript. The AI layer (`js/scorecard/ai.js`) is
+  off by default and, when on, may only *propose a signal* and *rewrite prose* —
+  the deterministic rules decide whether a signal fires, and they alone produce
+  the number. Test 8.2 asserts that enabling AI leaves every score
+  byte-identical. Model output with no source record is dropped; model output
+  asserting a date, figure, ticket or person absent from its context is dropped
+  rather than corrected.
+
+---
+
+### Scorecard rules enforced in code
+
+The nine-phase brief is mostly a list of ways this kind of product goes wrong.
+Each of these is a function with a test, not a note in a document:
+
+| Rule | Where it is enforced | Test |
+| ---- | -------------------- | ---- |
+| Missing data is never scored `0` | `healthScore.js` — an unavailable category is excluded and the weights re-normalise | 1.7, 2.2, 2.11 |
+| Health and priority are independent | `priority.js` never reads `health.score` | **3.2**, 9.14 |
+| An override raises urgency, never lowers it | `priority.js` applies the floor upward only | 3.13 |
+| Support is not a ticket count | `healthScore.js` weights severity, age, SLA, recurrence | 2.4, 2.5 |
+| Sentiment alone is capped | uncorroborated sentiment spends 25% of its weight | 2.6, 2.7 |
+| A cancellation is not masked by good orders | `retentionSignalCeiling` caps the category | 2.8 |
+| A low health score is not a SAVE | `queues.js` never reads `health.score` | 4.7 |
+| A product gap is not a GROW | `growRequiresQualifiedOpportunity` | 4.5 |
+| An account with nothing to do is in no queue | `primaryQueue: null` | 4.8 |
+| No generic "Contact customer" action | `allowGenericFallback: false`; no mapping → no recommendation | 5.2 |
+| An owner is never guessed | `Unassigned` when no rep and no mapping | 5.5 |
+| A draft asserts nothing unevidenced | `actionRules.validateClaims()` | **5.12** |
+| A draft names only verified contacts | otherwise suppressed, with the reason | 5.11 |
+| Enabling AI changes no score | AI proposes signals; rules decide | **8.2** |
+| A model statement with no source is dropped | `ai.validateStatement()` | 8.4–8.7 |
+| A fabrication is dropped, never repaired | same | 8.5 |
+| Nothing outbound without approval | `approval.perform()` is the only path | **8.12** |
+| Feedback never suppresses a rule | `autoSuppressRules: false` | 9.4, 9.5 |
+| A metric with no inputs says so | `Not yet measurable`, never `0` | 9.11 |
+| No engine reads the clock | `asOf` is injected everywhere | 9.15 |
+
+The four in bold are the ones worth re-running first after any change.
+
+---
+
+## Portfolio refresh
+
+The Command Center is a **batch over the same per-account pipeline** — not a
+parallel fetch path — so caching, per-source failure isolation and the
+manual-refresh bypass all behave exactly as they do on the account page.
+
+```text
+Refresh portfolio  ->  bounded fan-out (max 4 accounts at once)
+                   ->  per account: the existing 17-source load
+                   ->  scorecardEngine per account
+                   ->  portfolio.build()  ->  the screen
+```
+
+Two properties are load-bearing and both are tested:
+
+- **Concurrency is bounded.** 127 accounts must not open 127 simultaneous
+  requests. The observed peak is returned on the result so the cap is measured
+  rather than assumed.
+- **Partial failure renders.** One account failing to load lists that account and
+  shows the rest. Per-source failures inside a successfully loaded account are
+  listed too, because the account rendered but its picture is incomplete.
+
+Refresh is **manual or scheduled — never a continuously running model.**
 
 ---
 
@@ -258,9 +396,17 @@ as unavailable, which is stated on the account header.
 **Tests** — no framework, no dependencies:
 
 ```bash
-node tests/run-tests.cjs      # logic + rendering + XSS + privacy allow-list
-node tests/check-app.cjs      # app shell screen flow
+node tests/run-tests.cjs      # logic + rendering + XSS + privacy allow-list,
+                              # and it loads:
+                              #   tests/scorecard-tests.cjs   Phases 1-9
+                              #   tests/scenario-tests.cjs    17 scenarios
+node tests/check-app.cjs      # app shell screen flow, both views
 node tests/check-wiring.cjs   # script paths, element ids, load order
+
+# After changing the MOCK fixture set, regenerate the manifests and commit them.
+# tests/scorecard-tests.cjs asserts them, so a fixture cannot quietly lose a
+# source and stop exercising the path its manifest claims it covers.
+node tests/fixtures/generate.cjs
 ```
 
 **Useful query parameters**
@@ -333,8 +479,37 @@ add-in origin.
 
 ### 5. Not built, and deliberately so
 
-- No numeric health scoring — see the reasoning in `js/intelligence/health.js`.
-- No LLM summarisation. If one is added, it must sit behind the existing
-  evidence structure: every sentence keeps its `evidence` array, and a
-  sentence without evidence must not be displayable.
-- No write-back to CRM. This add-in is read-only by design.
+- **No write-back to CRM, and no outbound anything.** The add-in is read-only.
+  Exactly one function could ever produce an outbound effect —
+  `C360.approval.perform()` — and it refuses while
+  `scorecardConfig.approval.sendingEnabled` is `false`, which it still is after
+  Phase 8. Enabling it is a separate, separately reviewed decision, not a
+  consequence of the approval flow existing.
+- **No bulk approval, no auto-approval, no timed approval.** Each is refused in
+  code at the point a caller would reach for it, rather than being absent and
+  therefore easy to add.
+- **No predictive modelling and no auto-tuning.** Phase 9 measures; it does not
+  learn. Feedback never changes a score and never suppresses a rule —
+  suppression is a config change a person makes after reading the per-rule
+  false-positive rate.
+- **No LLM in the scoring path.** If AI is enabled it may propose a signal and
+  rewrite prose, behind the existing evidence structure: every model statement
+  keeps its `sourceRecords`, and a statement without one is not displayable.
+
+### 6. Where to start when a gateway does exist
+
+In this order, because each step makes the next one measurable:
+
+1. Wire the **communications** endpoint. Every deterministic text rule —
+   cancellation, competitor switch, executive escalation, sentiment — currently
+   reads only fixture emails, so its recall is a property of the fixtures.
+2. Wire **contracts**. Renewal dates unlock the renewal override, the
+   time-sensitivity factor and the SAVE queue's renewal-risk rule.
+3. Wire **device health**. It is the heaviest health category at 25% and is
+   unavailable on every real account until it exists.
+4. Only then read the **per-rule false-positive rates** in the metrics panel and
+   tune `scorecardConfig.priority.detection`. Re-run
+   `node tests/run-tests.cjs` after every change — the 17 scenarios exist so
+   that a threshold change has a visible, attributable effect.
+5. Only after all of that, revisit any weight in Phases 2–3, with the feedback
+   data as the argument.

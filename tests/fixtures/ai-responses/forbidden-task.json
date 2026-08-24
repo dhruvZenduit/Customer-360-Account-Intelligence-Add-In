@@ -1,0 +1,18 @@
+{
+  "note": "What a compromised or confused gateway might return for a task the client must never send. The adapter refuses `calculateHealth` BEFORE any transport call, so this response is unreachable in practice — it is recorded to document that the refusal is the client's job too.",
+  "task": "calculateHealth",
+  "response": {
+    "model": "test-model",
+    "statements": [
+      {
+        "text": "Health is 78.",
+        "sourceRecords": [
+          "communication-bm"
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "refusedBeforeTransport": true
+  }
+}

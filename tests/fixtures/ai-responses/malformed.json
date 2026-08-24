@@ -1,0 +1,9 @@
+{
+  "note": "Not an object at all. Handled, falls back, nothing thrown to the user.",
+  "response": "the model returned prose instead of JSON",
+  "expect": {
+    "ok": false,
+    "kept": 0,
+    "dropped": 0
+  }
+}

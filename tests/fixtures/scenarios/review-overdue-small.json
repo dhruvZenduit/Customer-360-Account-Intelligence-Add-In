@@ -1,0 +1,130 @@
+{
+  "id": "review-overdue-small",
+  "name": "Same review age on a Small Business account",
+  "category": "healthy",
+  "proves": "The segment half of the review rule. 130 days is inside the 180-day Small Business cadence, so nothing fires. This is the pair that makes the per-segment thresholds real rather than decorative.",
+  "data": {
+    "account": {
+      "id": "sc-review-small",
+      "name": "Harbour Point Logistics",
+      "domain": "sc-review-small.example",
+      "status": "Active",
+      "customerSince": "2018-09-30",
+      "assetCount": 58,
+      "accountOwner": "Priya Raman",
+      "contactProfile": "small-business",
+      "products": [
+        "Telematics Core",
+        "Driver Safety Cameras",
+        "Compliance / HOS",
+        "Routing & Dispatch",
+        "Asset Tracking"
+      ],
+      "mock": true
+    },
+    "quotes": [],
+    "orders": [],
+    "tickets": [],
+    "billingIssues": [],
+    "technicalIssues": [],
+    "reviews": [
+      {
+        "id": "sc-r3",
+        "date": "-130d",
+        "type": "Quarterly Business Review",
+        "mock": true
+      }
+    ],
+    "contacts": [
+      {
+        "id": "sc-sb1",
+        "name": "Iris Duval",
+        "title": "Owner",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "sc-sb2",
+        "name": "Tom Aldridge",
+        "title": "Operations Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "sc-sb3",
+        "name": "Dee Okafor",
+        "title": "Fleet Manager",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      },
+      {
+        "id": "sc-sb4",
+        "name": "Hal Brennan",
+        "title": "Controller",
+        "confidence": "Confirmed",
+        "sourceType": "internal",
+        "lastVerified": "-20d",
+        "mock": true
+      }
+    ],
+    "external": [],
+    "deviceHealth": {
+      "available": true,
+      "deviceCount": 180,
+      "notCommunicating": 2,
+      "cameraAvailabilityPct": 98,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "portalUsage": {
+      "available": true,
+      "activeUsers": 62,
+      "previousActiveUsers": 60,
+      "asOf": "-1d",
+      "mock": true
+    },
+    "contract": {
+      "id": "s-k1",
+      "startDate": "2019-05-01",
+      "renewalDate": "+300d",
+      "annualValue": 90000,
+      "mock": true
+    },
+    "communications": [
+      {
+        "id": "s-m1",
+        "date": "-9d",
+        "subject": "Thanks",
+        "body": "All good on our side this month.",
+        "author": "Dana Reyes",
+        "mock": true
+      }
+    ],
+    "commitments": [],
+    "outcomes": {
+      "available": true,
+      "trainingCompleted": true,
+      "trainingCompletedDate": "-40d",
+      "recommendationsImplemented": 2,
+      "improvements": [
+        {
+          "label": "Idling reduced",
+          "change": "-12%",
+          "date": "-30d"
+        }
+      ],
+      "mock": true
+    }
+  },
+  "expect": {
+    "overridesNotFired": [
+      "accountReviewOverdue"
+    ]
+  }
+}

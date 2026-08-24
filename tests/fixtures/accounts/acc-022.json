@@ -1,0 +1,37 @@
+{
+  "id": "acc-022",
+  "name": "Copperfield Freightways",
+  "category": "at-risk",
+  "mock": true,
+  "proves": "At-risk enterprise account with a critical camera ticket past SLA and an overdue commitment. Both a SAVE and a FIX, so it proves the FIX evidence travels with a SAVE-classified account.",
+  "account": {
+    "industry": "LTL Freight",
+    "status": "Active",
+    "customerSince": "2016-07-21",
+    "assetCount": 305,
+    "contactProfile": "enterprise",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 1,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 1
+  }
+}

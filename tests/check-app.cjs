@@ -45,7 +45,9 @@ function makeElement(id) {
         // app.js only queries for sections to toggle; returning an empty list
         // exercises the same code path without needing an HTML parser.
         querySelectorAll: function () { return []; },
-        closest: function () { return null; }
+        querySelector: function () { return null; },
+        closest: function () { return null; },
+        scrollIntoView: function () {}
     };
 }
 
@@ -53,7 +55,9 @@ const elements = {};
 [
     "c360-app", "c360-search", "c360-search-results", "c360-mock-banner",
     "c360-account-header", "c360-toolbar", "c360-source-status",
-    "c360-content", "c360-welcome", "c360-error"
+    "c360-content", "c360-welcome", "c360-error",
+    // Phase 6/7 containers.
+    "c360-viewnav", "c360-portfolio", "c360-scorecard-block"
 ].forEach((id) => { elements[id] = makeElement(id); });
 
 const sandbox = {
@@ -75,8 +79,11 @@ const sandbox = {
 
 sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
-sandbox.location = { href: "http://localhost/index.html" };
+sandbox.location = { href: "http://localhost/index.html", pathname: "/index.html", search: "", hash: "" };
 sandbox.window.location = sandbox.location;
+// app.js reflects filter + sort state into the URL. Stubbed rather than omitted
+// so the syncUrl() path is actually exercised.
+sandbox.window.history = { replaceState: function () {} };
 
 const storage = new Map();
 sandbox.window.sessionStorage = {
@@ -134,9 +141,17 @@ function waitFor(predicate, label) {
 
 async function run() {
     // ---- welcome screen ---------------------------------------------
+    // Started with ?view=account so the account view is showing with nothing
+    // selected — which is the one path that reaches the welcome screen.
+    sandbox.location.search = "?view=account";
     C360.app.start({});
 
     check("app marks itself started", elements["c360-app"].getAttribute("data-started") === "true");
+    check("the view switch is rendered",
+        elements["c360-viewnav"].innerHTML.indexOf("Command Center") !== -1);
+    check("the account tab is disabled before an account is chosen",
+        elements["c360-viewnav"].innerHTML.indexOf("disabled") !== -1);
+
     check("welcome screen is visible", elements["c360-welcome"].hidden === false);
     check("welcome screen invites an account selection",
         elements["c360-welcome"].innerHTML.indexOf("Select a customer account") !== -1);
@@ -144,8 +159,50 @@ async function run() {
         elements["c360-account-header"].hidden === true);
     check("toolbar is hidden before an account is chosen",
         elements["c360-toolbar"].hidden === true);
+    check("the scorecard block is hidden before an account is chosen",
+        elements["c360-scorecard-block"].hidden === true);
     check("search input has an input listener",
         (elements["c360-search"]._listeners.input || []).length === 1);
+
+    // ---- the Command Center (Phase 6) -------------------------------
+    C360.app.loadPortfolio({});
+
+    check("the portfolio container is visible once loading starts",
+        elements["c360-portfolio"].hidden === false);
+    check("the portfolio shows a loading state while scoring",
+        elements["c360-portfolio"].innerHTML.indexOf("Scoring the portfolio") !== -1);
+
+    await waitFor(
+        () => elements["c360-portfolio"].innerHTML.indexOf("Portfolio overview") !== -1,
+        "the Command Center to render"
+    );
+
+    const portfolio = elements["c360-portfolio"].innerHTML;
+
+    check("the Command Center renders its title",
+        portfolio.indexOf("Customer Portfolio Command Center") !== -1);
+    check("the portfolio reports a real account count",
+        /\d+ accounts<\/span>/.test(portfolio));
+    check("the portfolio renders the top-priority queue",
+        portfolio.indexOf("Top priorities") !== -1);
+    check("the portfolio renders all four action queues",
+        portfolio.indexOf(">SAVE ") !== -1 && portfolio.indexOf(">FIX ") !== -1
+        && portfolio.indexOf(">GROW ") !== -1 && portfolio.indexOf(">ENGAGE ") !== -1);
+    check("the portfolio states that queue counts do not sum to the total",
+        portfolio.indexOf("do not sum to") !== -1);
+    check("priority is conveyed as text, not only colour",
+        portfolio.indexOf("c360-sc-level--P0") !== -1 || portfolio.indexOf(">P1<") !== -1
+        || portfolio.indexOf(">P2<") !== -1 || portfolio.indexOf(">P3<") !== -1);
+    check("the portfolio shows a manual refresh control",
+        portfolio.indexOf("Refresh portfolio") !== -1);
+    check("the portfolio states refresh is not continuous",
+        portfolio.indexOf("No model runs") !== -1);
+    check("the portfolio renders the metrics panel",
+        portfolio.indexOf("Success metrics") !== -1);
+    check("unmeasurable metrics say so rather than showing zero",
+        portfolio.indexOf("Not yet measurable") !== -1);
+    check("mock banner is shown on the Command Center",
+        elements["c360-mock-banner"].hidden === false);
 
     // ---- load an account ---------------------------------------------
     C360.app.loadAccount("acc-001", {});
@@ -159,6 +216,43 @@ async function run() {
     );
 
     const content = elements["c360-content"].innerHTML;
+    const scorecard = elements["c360-scorecard-block"].innerHTML;
+
+    // ---- the scorecard block (Phase 7) ------------------------------
+    check("the scorecard block is visible on the account page",
+        elements["c360-scorecard-block"].hidden === false);
+    check("the scorecard renders health, priority and confidence",
+        scorecard.indexOf(">Health<") !== -1 && scorecard.indexOf(">Priority<") !== -1
+        && scorecard.indexOf(">Confidence<") !== -1);
+    check("the health score is reachable from its breakdown drawer",
+        scorecard.indexOf("Health score breakdown") !== -1);
+    check("the breakdown prints the arithmetic",
+        scorecard.indexOf("c360-sc-breakdown") !== -1 && scorecard.indexOf("&times;") !== -1);
+    check("the priority drawer names the reasons",
+        scorecard.indexOf("Why this account is") !== -1);
+    check("a primary reason is always stated",
+        scorecard.indexOf("Primary reason:") !== -1);
+    check("the confidence drawer lists per-source states",
+        scorecard.indexOf("Data confidence") !== -1);
+    check("the identity drawer is present",
+        scorecard.indexOf("Account identity") !== -1);
+    check("the scorecard explains that health and priority can disagree",
+        scorecard.indexOf("can disagree") !== -1);
+    check("recommendations carry an owner and a due date",
+        scorecard.indexOf("Suggested owner") !== -1 && scorecard.indexOf(">Due<") !== -1);
+    check("drafts are labelled DRAFT in the markup",
+        scorecard.indexOf(">DRAFT<") !== -1);
+    check("the send control is disabled with a stated reason",
+        scorecard.indexOf("Approve &amp; Send") !== -1
+        && scorecard.indexOf("No outbound integration is connected") !== -1);
+    check("all four feedback controls are offered",
+        scorecard.indexOf(">Useful<") !== -1 && scorecard.indexOf(">Incorrect<") !== -1
+        && scorecard.indexOf(">Not needed<") !== -1
+        && scorecard.indexOf(">Already handled<") !== -1);
+    check("feedback storage is disclosed as local-only",
+        scorecard.indexOf("stored in this browser session only") !== -1);
+    check("every scorecard id and class is c360- prefixed",
+        !/\s(?:id|class)="(?!c360-)[^"]/.test(scorecard));
 
     check("account header renders the account name",
         elements["c360-account-header"].innerHTML.indexOf("Acme Transportation") !== -1);

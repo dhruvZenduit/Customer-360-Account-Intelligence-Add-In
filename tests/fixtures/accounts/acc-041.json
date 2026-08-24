@@ -1,0 +1,37 @@
+{
+  "id": "acc-041",
+  "name": "Westgate Courier Co",
+  "category": "cancelled",
+  "mock": true,
+  "proves": "Suspended seasonal account with no device or portal feed. Proves the suspended segment has no review cadence and therefore no review-overdue override.",
+  "account": {
+    "industry": "Courier Services",
+    "status": "Suspended",
+    "customerSince": "2022-05-03",
+    "assetCount": 27,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 1,
+    "website": false,
+    "deviceHealth": false,
+    "portalUsage": false,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

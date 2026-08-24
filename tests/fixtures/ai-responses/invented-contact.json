@@ -1,0 +1,19 @@
+{
+  "note": "Names a person who appears nowhere in the context. This is the most damaging fabrication available, because it is the one that ends up in the To: line of a draft.",
+  "response": {
+    "model": "test-model",
+    "statements": [
+      {
+        "text": "Spoke with Jordan Nakamura about the renewal.",
+        "sourceRecords": [
+          "communication-bm"
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "ok": false,
+    "kept": 0,
+    "dropped": 1
+  }
+}

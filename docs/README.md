@@ -4,7 +4,9 @@ This folder breaks the **Customer Portfolio Health & Action Scorecard** brief in
 **nine sequential phases**, one document each.
 
 The brief is preserved verbatim in [Appendix A](./appendix-a-source-spec.md).
-The phase-level master plan is [`../newStuff.txt`](../newStuff.txt).
+The phase index below is the master plan; the original scratch plan it was written from has been removed.
+
+Implementation notes and the decisions taken where this brief and the existing add-in disagreed are recorded in [the Phase 1 audit](./phase-1-audit.md).
 
 ---
 

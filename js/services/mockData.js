@@ -32,6 +32,20 @@ C360.mockData = (function () {
         return d.toISOString();
     }
 
+    /**
+     * ISO timestamp for N days AFTER now — renewal dates, quote expiries and
+     * commitment dates that have not fallen due yet.
+     *
+     * Like ago(), these are offsets from load time rather than fixed dates, so
+     * the fixture keeps demonstrating "renewal in 61 days" instead of ageing
+     * into "renewal 400 days ago" and silently switching off every renewal rule.
+     */
+    function ahead(days) {
+        var d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.toISOString();
+    }
+
     /** Every mock record is stamped so the UI can badge it. */
     function m(obj) {
         obj.mock = true;
@@ -499,11 +513,679 @@ C360.mockData = (function () {
         }
     };
 
-    /** Empty shape returned for an account with no fixture entry. */
+
+    // =================================================================
+    // SCORECARD SOURCES for the four original fixtures
+    // =================================================================
+    // The Command Center reads six sources the original fixture set predates.
+    // They are added per account rather than globally, and DELIBERATELY LEFT
+    // OUT in places, so the "Data unavailable" path is reachable from the demo
+    // data instead of only from a unit test:
+    //
+    //   acc-001  everything present — the fully-instrumented account
+    //   acc-002  no device feed, no outcomes — health re-normalises, confidence drops
+    //   acc-003  almost nothing — too few categories to score health at all
+    //   acc-004  device + outcomes present, commitments untracked (null)
+    //
+    // `commitments: null` means "not a tracked source in this deployment";
+    // `commitments: []` means "tracked, none outstanding". Phase 3 treats those
+    // differently, so both appear below.
+
+    var scorecardSources = {
+
+        "acc-001": {
+            deviceHealth: m({ available: true, deviceCount: 412, notCommunicating: 34,
+                cameraCount: 180, cameraAvailabilityPct: 86, asOf: ago(1) }),
+            portalUsage: m({ available: true, activeUsers: 31, previousActiveUsers: 44,
+                logins30d: 210, asOf: ago(1) }),
+            contract: m({ id: "K-001", startDate: "2021-03-15", renewalDate: ahead(61),
+                annualValue: 480000, currency: "USD", pastDueAmount: 12400,
+                pastDueSince: ago(31) }),
+            commitments: [
+                m({ id: "CM-001", description: "Provide connectivity root-cause summary",
+                    dueDate: ago(9), completedDate: null, owner: "Tier 2 Support" }),
+                m({ id: "CM-002", description: "Send safety camera proposal",
+                    dueDate: ahead(6), completedDate: null, owner: "Priya Raman" })
+            ],
+            communications: [
+                m({ id: "MSG-001", date: ago(3), direction: "inbound",
+                    subject: "Camera issues — where are we?",
+                    body: "This is the third time this month we have had cameras drop out. "
+                        + "I am frustrated. If it is not resolved I will have to take the "
+                        + "question of whether we terminate to our board.",
+                    author: "Dana Whitfield", channel: "email" }),
+                m({ id: "MSG-002", date: ago(11), direction: "outbound",
+                    subject: "Connectivity investigation update",
+                    body: "Our Tier 2 team is still working the firmware regression.",
+                    author: "Priya Raman", channel: "email" })
+            ],
+            outcomes: m({ available: true, trainingCompleted: true,
+                trainingCompletedDate: ago(95), recommendationsImplemented: 3,
+                improvements: [
+                    m({ label: "Harsh-braking events reduced", change: "-18%", date: ago(60) })
+                ] })
+        },
+
+        // Renewal in 90 days with negative signals, and no device feed at all —
+        // health re-normalises across four categories and says so.
+        "acc-002": {
+            deviceHealth: null,
+            portalUsage: m({ available: true, activeUsers: 9, previousActiveUsers: 22,
+                logins30d: 41, asOf: ago(2) }),
+            contract: m({ id: "K-002", startDate: "2019-08-02", renewalDate: ahead(74),
+                annualValue: 168000, currency: "USD" }),
+            commitments: [],
+            communications: [
+                m({ id: "MSG-010", date: ago(6), direction: "inbound",
+                    subject: "Renewal and alternatives",
+                    body: "Before we renew we are evaluating two other providers. "
+                        + "Nothing personal — procurement is asking us to run an RFP.",
+                    author: "Ray Ortega", channel: "email" })
+            ],
+            outcomes: null
+        },
+
+        // Brand new, tiny, and barely instrumented. Health is reported
+        // UNAVAILABLE with a reason rather than as a bad number.
+        "acc-003": {
+            deviceHealth: null,
+            portalUsage: null,
+            contract: m({ id: "K-003", startDate: "2025-11-20", renewalDate: ahead(280),
+                annualValue: 21000, currency: "USD" }),
+            commitments: null,
+            communications: [],
+            outcomes: null
+        },
+
+        "acc-004": {
+            deviceHealth: m({ available: true, deviceCount: 1240, notCommunicating: 11,
+                cameraCount: 640, cameraAvailabilityPct: 97, asOf: ago(1) }),
+            portalUsage: m({ available: true, activeUsers: 143, previousActiveUsers: 138,
+                logins30d: 1890, asOf: ago(1) }),
+            contract: m({ id: "K-004", startDate: "2018-01-11", renewalDate: ahead(210),
+                annualValue: 1240000, currency: "CAD" }),
+            commitments: null,
+            communications: [
+                m({ id: "MSG-020", date: ago(7), direction: "inbound",
+                    subject: "Prairie Star integration",
+                    body: "We closed the Prairie Star acquisition. We will need to talk "
+                        + "about onboarding their tractors onto the platform.",
+                    author: "Alain Tremblay", channel: "email" })
+            ],
+            outcomes: m({ available: true, trainingCompleted: true,
+                trainingCompletedDate: ago(140), recommendationsImplemented: 5,
+                improvements: [
+                    m({ label: "Idling reduced", change: "-11%", date: ago(80) }),
+                    m({ label: "Fuel per mile improved", change: "-4%", date: ago(80) })
+                ] })
+        }
+    };
+
+    Object.keys(scorecardSources).forEach(function (accountId) {
+        if (!data[accountId]) { return; }
+        var extra = scorecardSources[accountId];
+        Object.keys(extra).forEach(function (key) {
+            data[accountId][key] = extra[key];
+        });
+    });
+
+    // =================================================================
+    // MVP FIXTURE SET — 22 further accounts
+    // =================================================================
+    //
+    // ##  STILL NOT REAL CUSTOMER DATA.  ##
+    //
+    // Phase 1 calls for 20-30 accounts deliberately sampled so that every MVP
+    // category is represented and every scoring path is reachable from the demo
+    // data. With the four originals that is 26.
+    //
+    // Each entry declares its CATEGORY and only the fields that make it that
+    // category; `buildFixture` fills in the rest. Written as a spec rather than
+    // 22 hand-copied blocks because the point of the set is category coverage,
+    // and coverage is legible in a table and invisible in 1,300 lines of
+    // near-identical object literals.
+    //
+    // Every generated record carries `mock: true` through `m()`, so the MOCK
+    // badge and the banner behave exactly as they do for the originals.
+    //
+    // Company names are deliberately invented and use .example domains, which
+    // are reserved by RFC 2606 and cannot resolve to a real business.
+
+    var FIXTURES = [
+
+        // ---- HEALTHY ------------------------------------------------
+        { id: "acc-010", name: "Cedar Ridge Haulage", category: "healthy", coverage: "full",
+          industry: "Regional Trucking", assets: 96, since: "2020-06-14",
+          owner: "Marcus Bell", profile: "fleet-heavy", value: 96000,
+          renewalIn: 240, devices: { down: 1, cameras: 99 }, portal: [38, 36],
+          outcomes: { training: true, implemented: 2, label: "Speeding events reduced", change: "-9%" } },
+
+        { id: "acc-011", name: "Blue Line Distribution", category: "healthy", coverage: "full",
+          industry: "Food Distribution", assets: 214, since: "2017-02-02",
+          owner: "Sofia Nkemdirim", profile: "fleet-heavy", value: 260000,
+          renewalIn: 190, devices: { down: 3, cameras: 96 }, portal: [77, 74],
+          outcomes: { training: true, implemented: 4, label: "On-time delivery improved", change: "+6%" } },
+
+        { id: "acc-012", name: "Harbour Point Logistics", category: "healthy", coverage: "full",
+          industry: "Port Drayage", assets: 58, since: "2021-09-30",
+          owner: "Priya Raman", profile: "small-business", value: 54000,
+          renewalIn: 150, devices: { down: 0, cameras: 100 }, portal: [19, 18] },
+
+        // ---- AT RISK ------------------------------------------------
+        { id: "acc-020", name: "Sable Creek Transport", category: "at-risk",
+          industry: "Bulk Freight", assets: 132, since: "2018-11-05",
+          owner: "Marcus Bell", profile: "fleet-heavy", value: 148000,
+          renewalIn: 55, devices: { down: 14, cameras: 88 }, portal: [24, 41],
+          reviewAgo: 210,
+          tickets: [
+              { subject: "Units dropping offline overnight", cat: "Connectivity", ago: 26, priority: "High", open: true, escalated: true },
+              { subject: "Repeat connectivity fault", cat: "Connectivity", ago: 48, priority: "Medium", open: true },
+              { subject: "Connectivity fault again", cat: "Connectivity", ago: 70, priority: "Medium", open: false }
+          ],
+          messages: [
+              { ago: 5, subject: "Losing patience", inbound: true,
+                body: "This is the third time we have raised this. Still not fixed. "
+                    + "I am disappointed with where we have got to.", author: "Nora Vance" }
+          ] },
+
+        { id: "acc-021", name: "Ironwood Carriers", category: "at-risk",
+          industry: "Flatbed Trucking", assets: 78, since: "2019-04-18",
+          owner: "Priya Raman", profile: "fleet-heavy", value: 82000,
+          renewalIn: 40, devices: { down: 9, cameras: 91 }, portal: [12, 20],
+          reviewAgo: 240,
+          messages: [
+              { ago: 8, subject: "Contract question", inbound: true,
+                body: "Our CFO has asked what is involved in moving to a competitor "
+                    + "when the term ends.", author: "Hal Brennan" }
+          ] },
+
+        { id: "acc-022", name: "Copperfield Freightways", category: "at-risk",
+          industry: "LTL Freight", assets: 305, since: "2016-07-21",
+          owner: "Sofia Nkemdirim", profile: "enterprise", value: 340000,
+          renewalIn: 88, devices: { down: 22, cameras: 79 }, portal: [51, 88],
+          reviewAgo: 130,
+          tickets: [
+              { subject: "Camera footage missing for incident review", cat: "Data", ago: 18, priority: "Critical", open: true, escalated: true }
+          ],
+          commitmentsOverdue: [{ description: "Provide incident footage recovery plan", ago: 12 }] },
+
+        // ---- HIGH VALUE ---------------------------------------------
+        { id: "acc-030", name: "Meridian Continental Freight", category: "high-value", coverage: "full",
+          industry: "Long-Haul Trucking", assets: 2100, since: "2014-03-09",
+          owner: "Sofia Nkemdirim", profile: "enterprise", value: 2400000,
+          renewalIn: 170, devices: { down: 18, cameras: 95 }, portal: [402, 388],
+          outcomes: { training: true, implemented: 9, label: "Collision rate reduced", change: "-22%" } },
+
+        { id: "acc-031", name: "Atlas Municipal Services", category: "high-value",
+          industry: "Municipal Fleet", assets: 890, since: "2015-01-26",
+          owner: "Marcus Bell", profile: "enterprise", value: 1050000,
+          renewalIn: 100, devices: { down: 7, cameras: 97 }, portal: [188, 181],
+          reviewAgo: 100 },
+
+        { id: "acc-032", name: "Grand Valley Bus Lines", category: "high-value",
+          industry: "Passenger Transport", assets: 640, since: "2016-11-11",
+          owner: "Priya Raman", profile: "enterprise", value: 720000,
+          renewalIn: 118, devices: { down: 31, cameras: 84 }, portal: [96, 104],
+          tickets: [
+              { subject: "HOS records incomplete ahead of DOT audit", cat: "Compliance", ago: 6, priority: "Critical", open: true, escalated: true }
+          ] },
+
+        // ---- RECENTLY CANCELLED -------------------------------------
+        { id: "acc-040", name: "Pinehurst Delivery Group", category: "cancelled",
+          industry: "Last-Mile Delivery", assets: 44, since: "2020-02-10",
+          owner: "Marcus Bell", profile: "small-business", value: 41000,
+          status: "Cancelled", cancelledAgo: 22, renewalIn: null,
+          devices: { down: 44, cameras: 0 }, portal: [0, 14],
+          reviewAgo: 260,
+          messages: [
+              { ago: 30, subject: "Ending our contract", inbound: true,
+                body: "We have decided not to renew and will end our contract at term. "
+                    + "Thank you for the work over the last few years.", author: "Iris Duval" }
+          ] },
+
+        { id: "acc-041", name: "Westgate Courier Co", category: "cancelled",
+          industry: "Courier Services", assets: 27, since: "2022-05-03",
+          owner: "Priya Raman", profile: "small-business", value: 26000,
+          status: "Suspended", renewalIn: 30,
+          devices: null, portal: null,
+          reviewAgo: 300,
+          messages: [
+              { ago: 14, subject: "Account on hold", inbound: true,
+                body: "We are pausing operations for the season and want to suspend "
+                    + "rather than cancel.", author: "Tom Aldridge" }
+          ] },
+
+        // ---- EXPANSION ----------------------------------------------
+        { id: "acc-050", name: "Summit Aggregates", category: "expansion", coverage: "full",
+          industry: "Construction Materials", assets: 158, since: "2019-08-08",
+          owner: "Priya Raman", profile: "fleet-heavy", value: 172000,
+          renewalIn: 200, devices: { down: 2, cameras: 97 }, portal: [46, 43],
+          orders: [{ qty: 60, ago: 24 }, { qty: 40, ago: 150 }],
+          quotes: [{ title: "Additional 40 units", amount: 58000, ago: 9, status: "Sent" }],
+          growth: [{ title: "New quarry site announced in Bend, OR", ago: 20 }] },
+
+        { id: "acc-051", name: "Rockport Marine Logistics", category: "expansion", coverage: "full",
+          industry: "Marine Freight", assets: 71, since: "2021-01-19",
+          owner: "Sofia Nkemdirim", profile: "fleet-heavy", value: 88000,
+          renewalIn: 230, devices: { down: 1, cameras: 99 }, portal: [26, 24],
+          orders: [{ qty: 35, ago: 30 }, { qty: 22, ago: 180 }],
+          external: [{ category: "expansion", title: "Rockport Marine wins regional port contract", ago: 12 }] },
+
+        { id: "acc-052", name: "Fairhaven Agricultural Co-op", category: "expansion",
+          industry: "Agriculture", assets: 122, since: "2018-03-27",
+          owner: "Marcus Bell", profile: "fleet-heavy", value: 130000,
+          renewalIn: 160, devices: { down: 4, cameras: 94 }, portal: [33, 31],
+          growth: [{ title: "Second grain terminal opening this season", ago: 15 }],
+          quotes: [{ title: "Asset tracking for trailers", amount: 34000, ago: 5, status: "Sent" }] },
+
+        // ---- TECHNICAL PROBLEMS -------------------------------------
+        { id: "acc-060", name: "Northfork Waste Solutions", category: "technical",
+          industry: "Waste Collection", assets: 187, since: "2018-09-14",
+          owner: "Marcus Bell", profile: "fleet-heavy", value: 195000,
+          renewalIn: 220, devices: { down: 46, cameras: 68 }, portal: [29, 34],
+          tickets: [
+              { subject: "Fleet-wide telemetry gaps after update", cat: "Connectivity", ago: 21, priority: "Critical", open: true, escalated: true },
+              { subject: "Camera uploads failing", cat: "Camera", ago: 30, priority: "High", open: true, escalated: true },
+              { subject: "Camera uploads failing on second yard", cat: "Camera", ago: 40, priority: "High", open: true },
+              { subject: "Camera uploads failing on third yard", cat: "Camera", ago: 52, priority: "Medium", open: false }
+          ],
+          technicalOpen: [{ subject: "Telemetry gaps after firmware 4.2", ago: 21,
+                            impact: "Reported by customer as affecting 46 vehicles.",
+                            impactSource: "Customer statement on the escalation thread." }] },
+
+        { id: "acc-061", name: "Silver Birch Transit", category: "technical",
+          industry: "Paratransit", assets: 64, since: "2020-10-06",
+          owner: "Priya Raman", profile: "small-business", value: 60000,
+          renewalIn: 145, devices: { down: 12, cameras: 74 }, portal: [14, 17],
+          tickets: [
+              { subject: "Safety alerts not triggering on two vehicles", cat: "Safety", ago: 11, priority: "Critical", open: true }
+          ] },
+
+        { id: "acc-062", name: "Halcyon Cold Chain", category: "technical",
+          industry: "Refrigerated Transport", assets: 143, since: "2019-12-01",
+          owner: "Sofia Nkemdirim", profile: "fleet-heavy", value: 165000,
+          renewalIn: 175, devices: { down: 8, cameras: 90 }, portal: [40, 39],
+          tickets: [
+              { subject: "Reefer temperature alerts delayed", cat: "Data", ago: 16, priority: "High", open: true },
+              { subject: "Reefer alerts delayed again", cat: "Data", ago: 34, priority: "High", open: true },
+              { subject: "Reefer alerts delayed on trailer 22", cat: "Data", ago: 58, priority: "Medium", open: false }
+          ] },
+
+        // ---- BILLING PROBLEMS ---------------------------------------
+        { id: "acc-070", name: "Kestrel Field Services", category: "billing",
+          industry: "Utilities Field Service", assets: 109, since: "2019-06-23",
+          owner: "Marcus Bell", profile: "fleet-heavy", value: 118000,
+          renewalIn: 205, devices: { down: 3, cameras: 95 }, portal: [35, 34],
+          pastDue: 28600, pastDueAgo: 46,
+          billingOpen: [{ subject: "Disputed per-unit rate on annual invoice", ago: 40,
+                          impact: "Customer has withheld payment pending review.",
+                          impactSource: "Stated by customer on the dispute thread." }] },
+
+        { id: "acc-071", name: "Amberline Coach Hire", category: "billing",
+          industry: "Coach Hire", assets: 38, since: "2021-04-12",
+          owner: "Priya Raman", profile: "small-business", value: 36000,
+          renewalIn: 90, devices: { down: 2, cameras: 96 }, portal: [11, 12],
+          pastDue: 7400, pastDueAgo: 62,
+          billingOpen: [{ subject: "Duplicate charge on two consecutive months", ago: 55 }],
+          messages: [
+              { ago: 10, subject: "Invoice still wrong", inbound: true,
+                body: "We have been charged twice again. This is unacceptable and we "
+                    + "would like it corrected before the next cycle.", author: "Dee Okafor" }
+          ] },
+
+        // ---- INACTIVE -----------------------------------------------
+        { id: "acc-080", name: "Torrance Equipment Rental", category: "inactive",
+          industry: "Equipment Rental", assets: 52, since: "2017-05-16",
+          owner: "Marcus Bell", profile: "small-business", value: 48000,
+          renewalIn: 260, devices: { down: 6, cameras: 92 }, portal: [4, 15],
+          reviewAgo: 400, lastActivityAgo: 190 },
+
+        { id: "acc-081", name: "Greywater Marine Supply", category: "inactive",
+          industry: "Marine Supply", assets: 31, since: "2018-08-29",
+          owner: "Priya Raman", profile: "small-business", value: 30000,
+          renewalIn: 240, devices: null, portal: null,
+          reviewAgo: 430, lastActivityAgo: 240 },
+
+        { id: "acc-082", name: "Thornbury Seasonal Freight", category: "inactive",
+          industry: "Seasonal Haulage", assets: 47, since: "2019-02-14",
+          owner: "Sofia Nkemdirim", profile: "small-business", value: 44000,
+          segment: "seasonal", renewalIn: 210,
+          devices: { down: 5, cameras: 93 }, portal: [3, 12],
+          reviewAgo: 190, lastActivityAgo: 150 }
+    ];
+
+    /** Domain from a fixture name. `.example` is reserved and cannot resolve. */
+    function fixtureDomain(name) {
+        return String(name).toLowerCase().replace(/[^a-z0-9]+/g, "") + ".example";
+    }
+
+    /**
+     * Invented contact names, distinct per fixture.
+     *
+     * Distinctness is the point: with a shared placeholder name, searching for
+     * a contact returned every fixture at once, which made the "matched
+     * contact: X" result meaningless. The pools are deliberately ordinary
+     * invented names, and every generated contact is stamped MOCK like the rest.
+     */
+    var FIXTURE_FIRST_NAMES = ["Alex", "Bree", "Cass", "Dev", "Elin", "Fern", "Gil", "Hana",
+                               "Ira", "Jo", "Kit", "Lex", "Mira", "Noor", "Ode", "Pia",
+                               "Quin", "Rae", "Sol", "Tam", "Uli", "Vik", "Wren", "Xan",
+                               "Yara", "Zev"];
+
+    var FIXTURE_LAST_NAMES = ["Ashford", "Bhatt", "Calder", "Duarte", "Ellery", "Fontaine",
+                              "Girard", "Halloway", "Iversen", "Janssen", "Kowal", "Lindqvist",
+                              "Mercado", "Novak", "Oyelaran", "Petrov", "Quintero", "Rasmussen",
+                              "Solberg", "Tanaka", "Umeh", "Vasquez", "Whitlock", "Xiong",
+                              "Yamada", "Zielinski"];
+
+    function fixtureContactName(spec, index) {
+        // Seeded from the account id so the same fixture always produces the
+        // same people — a fixture whose contacts move between runs is not a
+        // fixture.
+        var seed = 0;
+        String(spec.id).split("").forEach(function (character) {
+            seed += character.charCodeAt(0);
+        });
+        var first = FIXTURE_FIRST_NAMES[(seed + index * 7) % FIXTURE_FIRST_NAMES.length];
+        var last = FIXTURE_LAST_NAMES[(seed * 3 + index * 11) % FIXTURE_LAST_NAMES.length];
+        return first + " " + last;
+    }
+
+    /**
+     * Expand one fixture spec into an account record plus its bundle.
+     *
+     * Every default here is chosen so the account is BORING unless the spec says
+     * otherwise — a healthy account with nothing outstanding must be reachable,
+     * or the portfolio has no baseline and "21 accounts need no action today"
+     * can never be demonstrated.
+     */
+    function buildFixture(spec) {
+        var domain = fixtureDomain(spec.name);
+
+        var account = m({
+            id: spec.id,
+            name: spec.name,
+            industry: spec.industry,
+            status: spec.status || "Active",
+            customerSince: spec.since,
+            accountOwner: spec.owner,
+            website: "https://www." + domain,
+            domain: domain,
+            headquarters: spec.hq || "Not available",
+            employeeRange: spec.employeeRange || null,
+            contactProfile: spec.profile,
+            segment: spec.segment || null,
+            products: spec.products
+                || ["Telematics Core", "Driver Safety Cameras", "Compliance / HOS"],
+            assetCount: spec.assets,
+            assetCountSource: "CRM record",
+            primaryContact: null,
+            geotabDatabase: null
+        });
+
+        // ---- tickets ------------------------------------------------
+        var tickets = (spec.tickets || []).map(function (ticket, index) {
+            return m({
+                id: spec.id + "-T" + index,
+                number: String(4000 + index),
+                subject: ticket.subject,
+                category: ticket.cat,
+                opened: ago(ticket.ago),
+                lastUpdate: ago(Math.max(0, ticket.ago - 3)),
+                status: ticket.open ? "Open" : "Resolved",
+                priority: ticket.priority,
+                escalated: ticket.escalated === true,
+                owner: "Tier 2 Support",
+                url: null
+            });
+        });
+
+        // ---- orders + quotes ----------------------------------------
+        var orders = (spec.orders || [{ qty: 12, ago: 120 }]).map(function (order, index) {
+            return m({
+                id: spec.id + "-O" + index,
+                number: String(90000 + index),
+                date: ago(order.ago),
+                value: order.qty * 820,
+                currency: "USD",
+                products: ["Telematics Core"],
+                quantity: order.qty,
+                status: "Fulfilled",
+                owner: spec.owner,
+                url: null
+            });
+        });
+
+        var quotes = (spec.quotes || []).map(function (quote, index) {
+            return m({
+                id: spec.id + "-Q" + index,
+                number: String(13000 + index),
+                title: quote.title,
+                date: ago(quote.ago),
+                amount: quote.amount,
+                currency: "USD",
+                status: quote.status,
+                products: ["Telematics Core"],
+                owner: spec.owner,
+                url: null
+            });
+        });
+
+        // ---- reviews -------------------------------------------------
+        var reviewAgo = spec.reviewAgo === undefined ? 45 : spec.reviewAgo;
+        var reviews = reviewAgo === null ? [] : [m({
+            id: spec.id + "-R0",
+            date: ago(reviewAgo),
+            type: "Quarterly Business Review",
+            attendees: [spec.owner],
+            topics: ["Adoption", "Fleet plan"],
+            concerns: [], requests: [], opportunities: [], commitments: [], followUps: [],
+            url: null
+        })];
+
+        // ---- escalations ---------------------------------------------
+        function escalations(list) {
+            return (list || []).map(function (item, index) {
+                return m({
+                    id: spec.id + "-E" + index,
+                    subject: item.subject,
+                    date: ago(item.ago),
+                    status: "Open",
+                    owner: "Support",
+                    customerImpact: item.impact || null,
+                    impactEvidence: item.impactSource || null,
+                    lastActivity: ago(Math.max(0, item.ago - 4)),
+                    url: null
+                });
+            });
+        }
+
+        // ---- contacts -------------------------------------------------
+        // `coverage: "full"` fills the top four roles of the account's contact
+        // profile, so stakeholderCoverageGap does NOT fire. Without at least a
+        // few such accounts the ENGAGE queue catches the entire portfolio and
+        // "N accounts need no action today" can never be demonstrated — which
+        // is a claim Phase 6 explicitly makes.
+        //
+        // Names are drawn per fixture rather than shared, so a contact search
+        // returns one account instead of twenty-two.
+        var roleTitles = spec.coverage === "full"
+            ? (spec.profile === "small-business"
+                ? ["Owner", "Operations Manager", "Fleet Manager", "Controller"]
+                : spec.profile === "enterprise"
+                    ? ["VP Operations", "Director of Fleet", "CIO", "Procurement Manager"]
+                    : ["Fleet Manager", "Director of Operations", "Director of Safety",
+                       "Procurement Manager"])
+            : ["Fleet Manager", "Director of Operations"];
+
+        var contacts = (spec.contacts || roleTitles.map(function (title, index) {
+            return { name: fixtureContactName(spec, index), title: title };
+        })).map(function (contact, index) {
+            return m({
+                id: spec.id + "-C" + index,
+                name: contact.name,
+                title: contact.title,
+                source: "Internal CRM",
+                sourceUrl: null,
+                sourceType: "internal",
+                lastVerified: ago(30),
+                confidence: "Confirmed",
+                email: null,
+                phone: null,
+                note: null
+            });
+        });
+
+        // ---- website + external ---------------------------------------
+        var website = (spec.growth || []).length ? m({
+            fetchedAt: ago(1),
+            url: "https://www." + domain,
+            summary: null,
+            industry: spec.industry,
+            services: [], locations: [], marketsServed: [],
+            fleetStatement: null,
+            growthSignals: spec.growth.map(function (signal, index) {
+                return m({
+                    id: spec.id + "-W" + index,
+                    date: ago(signal.ago),
+                    title: signal.title,
+                    detail: signal.title
+                        + ". The announcement does not state a fleet or asset figure.",
+                    url: "https://www." + domain + "/news",
+                    confidence: "High"
+                });
+            }),
+            leadership: []
+        }) : null;
+
+        var external = (spec.external || []).map(function (item, index) {
+            return m({
+                id: spec.id + "-X" + index,
+                date: ago(item.ago),
+                category: item.category,
+                title: item.title,
+                summary: item.title + ". Terms were not disclosed.",
+                publisher: "Trade Press Example",
+                url: "https://tradepress.example/" + spec.id + "-" + index,
+                confidence: "High"
+            });
+        });
+
+        // ---- scorecard sources ----------------------------------------
+        var deviceHealth = spec.devices === null ? null : m({
+            available: true,
+            deviceCount: spec.assets,
+            notCommunicating: spec.devices.down,
+            cameraCount: Math.round(spec.assets / 2),
+            cameraAvailabilityPct: spec.devices.cameras,
+            asOf: ago(1)
+        });
+
+        var portalUsage = spec.portal === null ? null : m({
+            available: true,
+            activeUsers: spec.portal[0],
+            previousActiveUsers: spec.portal[1],
+            logins30d: spec.portal[0] * 6,
+            asOf: ago(1)
+        });
+
+        var contract = m({
+            id: spec.id + "-K",
+            startDate: spec.since,
+            renewalDate: spec.renewalIn === null ? null : ahead(spec.renewalIn),
+            // A declared segment travels on the contract record — see the note
+            // in js/scorecard/segments.js declaredSegment().
+            segment: spec.segment || null,
+            cancelledDate: spec.cancelledAgo ? ago(spec.cancelledAgo) : null,
+            cancellationRequested: spec.cancellationRequested === true,
+            annualValue: spec.value,
+            currency: "USD",
+            pastDueAmount: spec.pastDue || null,
+            pastDueSince: spec.pastDueAgo ? ago(spec.pastDueAgo) : null,
+            autoRenew: false
+        });
+
+        var commitments = (spec.commitmentsOverdue || []).map(function (item, index) {
+            return m({
+                id: spec.id + "-CM" + index,
+                description: item.description,
+                dueDate: ago(item.ago),
+                completedDate: null,
+                owner: spec.owner
+            });
+        });
+
+        var communications = (spec.messages || []).map(function (message, index) {
+            return m({
+                id: spec.id + "-MSG" + index,
+                date: ago(message.ago),
+                direction: message.inbound ? "inbound" : "outbound",
+                subject: message.subject,
+                body: message.body,
+                author: message.author || spec.owner,
+                channel: "email"
+            });
+        });
+
+        var outcomes = spec.outcomes ? m({
+            available: true,
+            trainingCompleted: spec.outcomes.training === true,
+            trainingCompletedDate: ago(120),
+            recommendationsImplemented: spec.outcomes.implemented || null,
+            improvements: spec.outcomes.label ? [m({
+                label: spec.outcomes.label,
+                change: spec.outcomes.change,
+                date: ago(70)
+            })] : []
+        }) : null;
+
+        return {
+            account: account,
+            bundle: {
+                quotes: quotes,
+                orders: orders,
+                tickets: tickets,
+                billingIssues: escalations(spec.billingOpen),
+                technicalIssues: escalations(spec.technicalOpen),
+                reviews: reviews,
+                website: website,
+                external: external,
+                contacts: contacts,
+                deviceHealth: deviceHealth,
+                portalUsage: portalUsage,
+                contract: contract,
+                commitments: commitments,
+                communications: communications,
+                outcomes: outcomes
+            },
+            category: spec.category
+        };
+    }
+
+    /** Which MVP category each fixture is meant to prove. */
+    var fixtureCategories = {};
+
+    FIXTURES.forEach(function (spec) {
+        var built = buildFixture(spec);
+        accounts.push(built.account);
+        data[spec.id] = built.bundle;
+        fixtureCategories[spec.id] = built.category;
+    });
+
+    /**
+     * Empty shape returned for an account with no fixture entry.
+     *
+     * Note what the scorecard sources default to: `null` for every feed, and
+     * `commitments: null` rather than `[]`. An account with no fixture has no
+     * device data — it does not have PERFECT device data, and it does not have
+     * zero devices. That distinction is the whole of global rule G3.
+     */
     function emptyBundle() {
         return {
             quotes: [], orders: [], tickets: [], billingIssues: [], technicalIssues: [],
-            reviews: [], website: null, external: [], contacts: []
+            reviews: [], website: null, external: [], contacts: [],
+            deviceHealth: null, portalUsage: null, contract: null,
+            commitments: null, communications: [], outcomes: null
         };
     }
 
@@ -513,6 +1195,9 @@ C360.mockData = (function () {
 
     return {
         accounts: accounts,
-        forAccount: forAccount
+        forAccount: forAccount,
+        /** Which MVP category each generated fixture is meant to prove. */
+        fixtureCategories: fixtureCategories,
+        fixtureSpecs: FIXTURES
     };
 }());

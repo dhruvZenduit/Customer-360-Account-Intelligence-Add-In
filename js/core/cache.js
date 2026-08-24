@@ -118,7 +118,12 @@ C360.cache = (function () {
 
     /** Every source key the orchestrator caches under. */
     var SOURCES = ["account", "quotes", "orders", "tickets", "billing",
-                   "technical", "reviews", "website", "external", "contacts", "geotab"];
+                   "technical", "reviews", "website", "external", "contacts", "geotab",
+                   // Scorecard sources. Listed here so Refresh drops them too —
+                   // a source missing from this list survives a manual refresh,
+                   // which looks exactly like a refresh that did not work.
+                   "deviceHealth", "portalUsage", "contract", "commitments",
+                   "communications", "outcomes"];
 
     /** Drop every cached entry for one account (used by Refresh Intelligence). */
     function clearAccount(accountId) {

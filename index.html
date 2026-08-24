@@ -55,6 +55,22 @@
         -->
         <div id="c360-mock-banner" class="c360-mock-banner" role="note" hidden></div>
 
+        <!--
+            View switch: Command Center / Account detail.
+
+            The Command Center is the landing screen, because the product's
+            question — "who should I care about today?" — is a portfolio question,
+            not a single-account one.
+        -->
+        <nav id="c360-viewnav" class="c360-viewnav" aria-label="View" hidden></nav>
+
+        <!--
+            The Customer Portfolio Command Center (Phase 6). All DOM comes from
+            js/ui/portfolio.js; every number in it is computed by the pure
+            roll-up in js/scorecard/portfolio.js.
+        -->
+        <div id="c360-portfolio" class="c360-portfolio" hidden></div>
+
         <!-- Account header: name, industry, key facts (spec section 6) -->
         <div id="c360-account-header" class="c360-account-header" hidden></div>
 
@@ -69,6 +85,17 @@
 
         <!-- Page-level error state -->
         <div id="c360-error" class="c360-error" role="alert" hidden></div>
+
+        <!--
+            The account scorecard (Phase 7): health, priority, confidence, their
+            explanation drawers, and the recommended actions.
+
+            It sits HERE — between the account header and #c360-content — because
+            the scorecard is additive. Every existing Customer 360 section below
+            keeps its order, its markup and its behaviour; nothing about this
+            block reaches into them.
+        -->
+        <div id="c360-scorecard-block" class="c360-scorecard-block" hidden></div>
 
         <!-- All dashboard sections are rendered into here -->
         <main id="c360-content" class="c360-content"></main>
@@ -88,6 +115,7 @@
     <!-- Core -->
     <script src="js/core/namespace.js"></script>
     <script src="js/core/config.js"></script>
+    <script src="js/core/scorecardConfig.js"></script>
     <script src="js/core/util.js"></script>
     <script src="js/core/cache.js"></script>
 
@@ -112,6 +140,9 @@
     <script src="js/services/webResearchService.js"></script>
     <script src="js/services/contactService.js"></script>
     <script src="js/services/geotabService.js"></script>
+    <!-- Scorecard sources: device health, portal usage, contract, commitments,
+         communications, outcomes. None is connected to a real system today. -->
+    <script src="js/services/scorecardSourceService.js"></script>
 
     <!-- Intelligence engine: facts -> signals -> risks/opportunities -> actions -->
     <script src="js/intelligence/facts.js"></script>
@@ -124,10 +155,46 @@
     <script src="js/intelligence/summary.js"></script>
     <script src="js/intelligence/intelligenceEngine.js"></script>
 
+    <!--
+        Scorecard engine: identity -> segment -> health -> priority -> queues
+        -> actions. Load order is dependency order, same rule as everything
+        above: the shared evidence and detection helpers first, then Phase 1,
+        then each phase that reads the one before it.
+
+        Note that priority.js loads AFTER healthScore.js only for readability —
+        priority never reads a health score, which is what lets the two numbers
+        legitimately disagree.
+    -->
+    <script src="js/scorecard/evidence.js"></script>
+    <script src="js/scorecard/detect.js"></script>
+    <script src="js/scorecard/identity.js"></script>
+    <script src="js/scorecard/segments.js"></script>
+    <script src="js/scorecard/confidence.js"></script>
+    <script src="js/scorecard/healthScore.js"></script>
+    <script src="js/scorecard/overrides.js"></script>
+    <script src="js/scorecard/priority.js"></script>
+    <script src="js/scorecard/queues.js"></script>
+    <script src="js/scorecard/actionRules.js"></script>
+    <script src="js/scorecard/actionEngine.js"></script>
+    <script src="js/scorecard/scorecardEngine.js"></script>
+    <script src="js/scorecard/portfolio.js"></script>
+
+    <!-- AI + approval (Phase 8). ai.enabled is false; sendingEnabled is false. -->
+    <script src="js/scorecard/ai.js"></script>
+    <script src="js/scorecard/approval.js"></script>
+
+    <!-- Feedback + metrics (Phase 9). -->
+    <script src="js/scorecard/feedback.js"></script>
+    <script src="js/scorecard/metrics.js"></script>
+
     <!-- Orchestration + UI -->
     <script src="js/orchestrator.js"></script>
     <script src="js/ui/components.js"></script>
     <script src="js/ui/render.js"></script>
+    <script src="js/ui/feedback.js"></script>
+    <script src="js/ui/approval.js"></script>
+    <script src="js/ui/scorecard.js"></script>
+    <script src="js/ui/portfolio.js"></script>
     <script src="js/ui/app.js"></script>
 
     <!-- MyGeotab lifecycle (last: everything above must already exist) -->

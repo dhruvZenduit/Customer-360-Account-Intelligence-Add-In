@@ -62,6 +62,7 @@ const ROOT = path.join(__dirname, "..");
 const FILES = [
     "js/core/namespace.js",
     "js/core/config.js",
+    "js/core/scorecardConfig.js",
     "js/core/util.js",
     "js/core/cache.js",
     "js/intelligence/normalize.js",
@@ -80,6 +81,7 @@ const FILES = [
     "js/services/webResearchService.js",
     "js/services/contactService.js",
     "js/services/geotabService.js",
+    "js/services/scorecardSourceService.js",
     "js/intelligence/facts.js",
     "js/intelligence/signals.js",
     "js/intelligence/risks.js",
@@ -89,11 +91,36 @@ const FILES = [
     "js/intelligence/recommendations.js",
     "js/intelligence/summary.js",
     "js/intelligence/intelligenceEngine.js",
+
+    // Scorecard engines. Every one is pure and takes an injected `asOf`, which
+    // is what makes them testable here and deterministic across runs.
+    "js/scorecard/evidence.js",
+    "js/scorecard/detect.js",
+    "js/scorecard/identity.js",
+    "js/scorecard/segments.js",
+    "js/scorecard/confidence.js",
+    "js/scorecard/healthScore.js",
+    "js/scorecard/overrides.js",
+    "js/scorecard/priority.js",
+    "js/scorecard/queues.js",
+    "js/scorecard/actionRules.js",
+    "js/scorecard/actionEngine.js",
+    "js/scorecard/scorecardEngine.js",
+    "js/scorecard/portfolio.js",
+    "js/scorecard/ai.js",
+    "js/scorecard/approval.js",
+    "js/scorecard/feedback.js",
+    "js/scorecard/metrics.js",
+
     "js/orchestrator.js",
     // UI string builders. These are pure functions — they return HTML rather
     // than touching the DOM — so they are testable here without a browser.
     "js/ui/components.js",
-    "js/ui/render.js"
+    "js/ui/render.js",
+    "js/ui/feedback.js",
+    "js/ui/approval.js",
+    "js/ui/scorecard.js",
+    "js/ui/portfolio.js"
 ];
 
 FILES.forEach((file) => {
@@ -530,10 +557,29 @@ C360.orchestrator.load("acc-001", { forceRefresh: true }).then((result) => {
     eq("internal group is healthy", groups.filter((g) => g.id === "internal")[0].ok, true);
     eq("external group is flagged", groups.filter((g) => g.id === "external")[0].ok, false);
 
-    report();
+    // =================================================================
+    // Scorecard suites (Phases 1-9) + the consolidated scenario suite
+    // =================================================================
+    // Loaded here rather than as separate entry points so `node
+    // tests/run-tests.cjs` stays the one command that proves the whole product.
+    //
+    // The scorecard suite returns a promise: the Phase 8 AI tests drive an
+    // injected transport, so a few assertions land asynchronously and the
+    // report has to wait for them. Reporting before they settle would show a
+    // green run that had not finished checking.
+    return Promise.resolve(
+        require("./scorecard-tests.cjs")({ C360: C360, check: check, eq: eq, has: has })
+    ).then(() => {
+        require("./scenario-tests.cjs")({ C360: C360, check: check, eq: eq });
+        report();
+    }).catch((error) => {
+        failures.push("scorecard suite threw: " + (error && error.stack
+            ? error.stack : error));
+        report();
+    });
 }).catch((error) => {
     C360.webResearchService.load = originalLoad;
-    failures.push("orchestrator load threw: " + error.message);
+    failures.push("orchestrator load threw: " + (error && error.stack ? error.stack : error.message));
     report();
 });
 

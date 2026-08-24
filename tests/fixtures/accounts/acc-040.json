@@ -1,0 +1,37 @@
+{
+  "id": "acc-040",
+  "name": "Pinehurst Delivery Group",
+  "category": "cancelled",
+  "mock": true,
+  "proves": "Recently cancelled: contract carries a cancelled date, so lifecycle resolves to churned from evidence rather than from the status string alone.",
+  "account": {
+    "industry": "Last-Mile Delivery",
+    "status": "Cancelled",
+    "customerSince": "2020-02-10",
+    "assetCount": 44,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 0,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 1,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}

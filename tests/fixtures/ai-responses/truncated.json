@@ -1,0 +1,12 @@
+{
+  "note": "Well-formed but empty — the response was cut off before any statement arrived.",
+  "response": {
+    "model": "test-model",
+    "statements": []
+  },
+  "expect": {
+    "ok": false,
+    "kept": 0,
+    "dropped": 0
+  }
+}

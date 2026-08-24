@@ -128,6 +128,41 @@ C360.dataSource = (function () {
 
         getExternalResearch: function (accountId) {
             return later(C360.mockData.forAccount(accountId).external, "external");
+        },
+
+        // ---- Scorecard sources -------------------------------------
+        // The fixtures deliberately leave some of these out on some accounts,
+        // so the "Data unavailable" path is reachable from the demo data rather
+        // than only from a unit test.
+
+        getDeviceHealth: function (accountId) {
+            return later(C360.mockData.forAccount(accountId).deviceHealth || null, "deviceHealth");
+        },
+
+        getPortalUsage: function (accountId) {
+            return later(C360.mockData.forAccount(accountId).portalUsage || null, "portalUsage");
+        },
+
+        getContract: function (accountId) {
+            return later(C360.mockData.forAccount(accountId).contract || null, "contract");
+        },
+
+        /**
+         * null means "not a tracked source", [] means "tracked, none
+         * outstanding". The fixtures use both, because Phase 3 treats them
+         * differently and only one of them can be tested by accident.
+         */
+        getCommitments: function (accountId) {
+            var value = C360.mockData.forAccount(accountId).commitments;
+            return later(value === undefined ? null : value, "commitments");
+        },
+
+        getCommunications: function (accountId) {
+            return later(C360.mockData.forAccount(accountId).communications || [], "communications");
+        },
+
+        getOutcomes: function (accountId) {
+            return later(C360.mockData.forAccount(accountId).outcomes || null, "outcomes");
         }
     };
 
@@ -172,6 +207,18 @@ C360.dataSource = (function () {
                 account.name,
                 (ctx && ctx.days) || 365
             );
+        },
+
+        // ---- Scorecard sources -------------------------------------
+
+        getDeviceHealth: function (accountId) { return C360.gatewayClient.getDeviceHealth(accountId); },
+        getPortalUsage: function (accountId) { return C360.gatewayClient.getPortalUsage(accountId); },
+        getContract: function (accountId) { return C360.gatewayClient.getContract(accountId); },
+        getCommitments: function (accountId) { return C360.gatewayClient.getCommitments(accountId); },
+        getOutcomes: function (accountId) { return C360.gatewayClient.getOutcomes(accountId); },
+
+        getCommunications: function (accountId, ctx) {
+            return C360.gatewayClient.getCommunications(accountId, (ctx && ctx.days) || 365);
         }
     };
 
@@ -237,6 +284,14 @@ C360.dataSource = (function () {
         getReviews: delegate("getReviews"),
         getContacts: delegate("getContacts"),
         getWebsiteExtract: delegate("getWebsiteExtract"),
-        getExternalResearch: delegate("getExternalResearch")
+        getExternalResearch: delegate("getExternalResearch"),
+
+        // Scorecard sources (Phases 1-2).
+        getDeviceHealth: delegate("getDeviceHealth"),
+        getPortalUsage: delegate("getPortalUsage"),
+        getContract: delegate("getContract"),
+        getCommitments: delegate("getCommitments"),
+        getCommunications: delegate("getCommunications"),
+        getOutcomes: delegate("getOutcomes")
     };
 }());

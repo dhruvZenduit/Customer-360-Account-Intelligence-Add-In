@@ -1,0 +1,37 @@
+{
+  "id": "acc-061",
+  "name": "Silver Birch Transit",
+  "category": "technical",
+  "mock": true,
+  "proves": "Technical: safety alerts not triggering — fires the safety pattern from a TICKET, which is the scoped-correctly case.",
+  "account": {
+    "industry": "Paratransit",
+    "status": "Active",
+    "customerSince": "2020-10-06",
+    "assetCount": 64,
+    "contactProfile": "small-business",
+    "products": [
+      "Telematics Core",
+      "Driver Safety Cameras",
+      "Compliance / HOS"
+    ],
+    "geotabDatabase": null
+  },
+  "sources": {
+    "quotes": 0,
+    "orders": 1,
+    "tickets": 1,
+    "billingIssues": 0,
+    "technicalIssues": 0,
+    "reviews": 1,
+    "contacts": 2,
+    "external": 0,
+    "communications": 0,
+    "website": false,
+    "deviceHealth": true,
+    "portalUsage": true,
+    "contract": true,
+    "outcomes": false,
+    "commitments": 0
+  }
+}
