@@ -111,11 +111,11 @@ C360.shell = (function () {
             + ' aria-label="Search results" hidden></ul>'
             + '</div>';
 
-        return '<div class="c360-bar-left">'
+        return '<div class="c360-cmdbar-left">'
              + viewTabs(state)
              + status
              + '</div>'
-             + '<div class="c360-bar-right">'
+             + '<div class="c360-cmdbar-right">'
              + search
              + '<button type="button" class="c360-button c360-button--ai" id="c360-ask-ai"'
              + ' aria-pressed="' + (state.aiOpen === true) + '">'

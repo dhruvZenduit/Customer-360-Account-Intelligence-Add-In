@@ -2906,7 +2906,15 @@
  * it is not a problem worth introducing that one for.
  */
 
-.c360-bar {
+/*
+ * NAMED `cmdbar`, NOT `bar`. There is a completely unrelated `.c360-bar` far
+ * below — the priority-score factor meter, `display: grid` with a 46px value
+ * column. Two different components under one class name is not a collision the
+ * cascade can resolve: same specificity, so the later rule simply wins, and the
+ * command header was silently being laid out as a factor bar with its right
+ * cluster crushed into that 46px column. Keep these two names distinct.
+ */
+.c360-cmdbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2917,14 +2925,23 @@
     border-bottom: 1px solid var(--c360-border);
 }
 
-.c360-bar-left,
-.c360-bar-right {
+.c360-cmdbar-left,
+.c360-cmdbar-right {
     display: flex;
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
     min-width: 0;
 }
+
+/*
+ * The panel width is MyGeotab's to decide, so the right cluster has to survive
+ * being narrowed. The search box shrinks first, down to a floor where its
+ * placeholder is still readable; the button labels never break mid-phrase,
+ * because "Ask Portfolio / AI" stacked over three lines is not a smaller
+ * button, it is a broken one.
+ */
+.c360-cmdbar-right .c360-button { white-space: nowrap; }
 
 /* ---- view tabs ---------------------------------------------------- */
 /*
@@ -3038,7 +3055,12 @@
 
 /* ---- search ------------------------------------------------------- */
 
-.c360-bar .c360-search { position: relative; width: 224px; }
+.c360-cmdbar .c360-search {
+    position: relative;
+    flex: 0 1 224px;
+    min-width: 132px;
+    max-width: 224px;
+}
 
 .c360-search-input {
     width: 100%;
@@ -4852,10 +4874,10 @@
 
 @media (max-width: 720px) {
     #c360-app { --c360-pad: 12px; }
-    .c360-bar { padding: 8px var(--c360-pad); }
+    .c360-cmdbar { padding: 8px var(--c360-pad); }
     .c360-figs { grid-template-columns: minmax(0, 1fr); }
     .c360-fig { border-right: 0; border-bottom: 1px solid var(--c360-border); }
-    .c360-bar .c360-search { width: 100%; }
+    .c360-cmdbar .c360-search { flex: 1 1 100%; max-width: none; }
     .c360-search-results { width: 100%; }
     .c360-views { width: 100%; overflow-x: auto; }
 }
